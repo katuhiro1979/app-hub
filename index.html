@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DB同期サンプル</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; }
+  input, select, button { font-size: 16px; padding: 8px; margin: 4px 0; }
+  input { width: 100%; box-sizing: border-box; }
+  button { cursor: pointer; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  ul { list-style: none; padding: 0; }
+  li { border: 1px solid #ccc; border-radius: 6px; padding: 8px; margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
+  .app { font-size: 12px; background: #def; border-radius: 4px; padding: 2px 6px; margin-right: 6px; }
+  .msg { color: #c00; min-height: 1.2em; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<h1>DB同期サンプル</h1>
+
+<!-- 設定未入力の警告 -->
+<p id="cfgWarn" class="msg hidden">index.html の SUPABASE_URL / SUPABASE_KEY を設定してください。</p>
+
+<!-- ログイン画面 -->
+<section id="loginView">
+  <h2>ログイン</h2>
+  <input id="email" type="email" placeholder="メールアドレス">
+  <input id="password" type="password" placeholder="パスワード（6文字以上）">
+  <div class="row">
+    <button id="loginBtn">ログイン</button>
+    <button id="signupBtn">新規登録</button>
+  </div>
+</section>
+
+<!-- メイン画面 -->
+<section id="mainView" class="hidden">
+  <div class="row">
+    <span id="userLabel"></span>
+    <button id="logoutBtn">ログアウト</button>
+  </div>
+  <h2>アプリ管理</h2>
+  <input id="appName" placeholder="新しいアプリ名（例：出勤簿）">
+  <input id="appUrl" type="url" placeholder="アプリのURL（例：https://example.github.io/kintai.html）">
+  <input id="appDesc" placeholder="説明（任意）">
+  <button id="appAddBtn">アプリ追加</button>
+  <ul id="appList"></ul>
+
+  <h2>データ登録</h2>
+  <select id="appSelect"></select>
+  <input id="title" placeholder="内容（例：2026/10/03 出勤 9:00）">
+  <button id="addBtn">追加</button>
+
+  <h2>一覧（他の端末の変更も自動反映）</h2>
+  <select id="filterSelect"></select>
+  <ul id="list"></ul>
+</section>
+
+<p id="msg" class="msg"></p>
+
+<script>
+// ★ Supabase の Project Settings > API から取得した値を設定する
+const SUPABASE_URL = 'https://kcadsiwjxlmhzremgzet.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjYWRzaXdqeGxtaHpyZW1nemV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4ODgzNzAsImV4cCI6MjEwNTQ2NDM3MH0.ZOm5zNFazsLKFl8N-oLhBeUxZcYscPNdOpYPOwq8d9M'; // anon (publishable) キーのみ。service_role は絶対に入れない
+
+const $ = (id) => document.getElementById(id);
+const show = (m) => { $('msg').textContent = m || ''; };
+
+if (SUPABASE_URL.startsWith('YOUR_')) {
+  $('cfgWarn').classList.remove('hidden');
+  $('loginView').classList.add('hidden');
+  throw new Error('Supabase未設定');
+}
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let channel = null;
+
+// アプリ一覧を再取得して描画（登録用・絞り込み用のプルダウンも更新）
+async function loadApps() {
+  const { data, error } = await sb.from('apps').select('*').order('created_at');
+  if (error) return show(error.message);
+  const ul = $('appList');
+  ul.innerHTML = '';
+  const prevSel = $('appSelect').value;
+  const prevFilter = $('filterSelect').value;
+  $('appSelect').innerHTML = '';
+  $('filterSelect').innerHTML = '';
+  $('filterSelect').append(new Option('すべてのアプリ', ''));
+  for (const a of data) {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    // URLが http(s) の場合のみリンク化（javascript: 等を防ぐ）
+    if (/^https?:\/\//i.test(a.url || '')) {
+      const link = document.createElement('a');
+      link.href = a.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = a.name;
+      name.append(link);
+    } else {
+      name.textContent = a.name;
+    }
+    if (a.description) {
+      const d = document.createElement('small');
+      d.textContent = '　' + a.description;
+      name.append(d);
+    }
+    const del = document.createElement('button');
+    del.textContent = '削除';
+    // アプリ名のみ削除。登録済みデータは残る
+    del.onclick = async () => {
+      if (!confirm(`アプリ「${a.name}」を一覧から削除します。登録済みデータは残ります。`)) return;
+      const { error } = await sb.from('apps').delete().eq('id', a.id);
+      if (error) show(error.message);
+    };
+    li.append(name, del);
+    ul.append(li);
+    $('appSelect').append(new Option(a.name, a.name));
+    $('filterSelect').append(new Option(a.name, a.name));
+  }
+  $('appSelect').value = prevSel;
+  $('filterSelect').value = prevFilter;
+  if (!data.length) show('まずアプリを追加してください。');
+}
+
+// 一覧を再取得して描画
+async function loadItems() {
+  let q = sb.from('items').select('*').order('created_at', { ascending: false });
+  if ($('filterSelect').value) q = q.eq('app_name', $('filterSelect').value);
+  const { data, error } = await q;
+  if (error) return show(error.message);
+  const ul = $('list');
+  ul.innerHTML = '';
+  for (const it of data) {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    const tag = document.createElement('span');
+    tag.className = 'app';
+    tag.textContent = it.app_name;
+    span.append(tag, it.title); // textContent 相当で挿入しXSSを防ぐ
+    const del = document.createElement('button');
+    del.textContent = '削除';
+    del.onclick = async () => {
+      const { error } = await sb.from('items').delete().eq('id', it.id);
+      if (error) show(error.message);
+    };
+    li.append(span, del);
+    ul.append(li);
+  }
+}
+
+// 画面の切り替えとリアルタイム購読
+function applySession(session) {
+  const loggedIn = !!session;
+  $('loginView').classList.toggle('hidden', loggedIn);
+  $('mainView').classList.toggle('hidden', !loggedIn);
+  if (channel) { sb.removeChannel(channel); channel = null; }
+  if (loggedIn) {
+    $('userLabel').textContent = session.user.email;
+    loadApps().then(loadItems);
+    // 他端末での追加・削除を検知して再読み込み
+    channel = sb.channel('items-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, loadItems)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'apps' }, loadApps)
+      .subscribe();
+  }
+}
+
+sb.auth.onAuthStateChange((_e, session) => applySession(session));
+
+$('loginBtn').onclick = async () => {
+  show('');
+  const { error } = await sb.auth.signInWithPassword({ email: $('email').value, password: $('password').value });
+  if (error) show(error.message);
+};
+$('signupBtn').onclick = async () => {
+  show('');
+  const { error } = await sb.auth.signUp({ email: $('email').value, password: $('password').value });
+  show(error ? error.message : '登録しました。確認メールが届いた場合はリンクを開いてからログインしてください。');
+};
+$('logoutBtn').onclick = () => sb.auth.signOut();
+
+$('filterSelect').onchange = loadItems;
+
+$('appAddBtn').onclick = async () => {
+  const name = $('appName').value.trim();
+  if (!name) return;
+  const url = $('appUrl').value.trim();
+  if (url && !/^https?:\/\//i.test(url)) return show('URLは http:// または https:// で始めてください。');
+  show('');
+  const { error } = await sb.from('apps').insert({ name, url: url || null, description: $('appDesc').value.trim() || null });
+  if (error) return show(error.code === '23505' ? '同じ名前のアプリが既にあります。' : error.message);
+  $('appName').value = '';
+  $('appUrl').value = '';
+  $('appDesc').value = '';
+};
+
+$('addBtn').onclick = async () => {
+  const title = $('title').value.trim();
+  if (!title || !$('appSelect').value) return;
+  const { error } = await sb.from('items').insert({ app_name: $('appSelect').value, title });
+  if (error) return show(error.message);
+  $('title').value = '';
+};
+</script>
+</body>
+</html>
