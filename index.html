@@ -138,6 +138,8 @@
     background: transparent; color: var(--muted); font-size: 18px; line-height: 1; display: grid; place-items: center;
     opacity: 0; transition: opacity .15s ease, background .15s ease, color .15s ease;
   }
+  .edit { right: 42px; font-size: 15px; }
+  .edit:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
   .card:hover .del, .del:focus-visible { opacity: 1; }
   .del:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
   @media (hover: none) { .del { opacity: .55; } } /* スマホには常に薄く表示 */
@@ -227,7 +229,7 @@
 <!-- アプリ追加ダイアログ -->
 <dialog id="addDialog">
   <form id="addForm" method="dialog">
-    <h3>アプリを追加</h3>
+    <h3 id="dialogTitle">アプリを追加</h3>
     <label for="appName">アプリ名</label>
     <input id="appName" class="field" placeholder="例：出勤簿" required maxlength="40">
     <label for="appUrl">URL</label>
@@ -337,7 +339,14 @@ async function loadApps() {
       const { error } = await sb.from('apps').delete().eq('id', a.id);
       if (error) show(error.message);
     };
-    li.append(body, del);
+    const edit = document.createElement('button');
+    edit.className = 'del edit';
+    edit.type = 'button';
+    edit.textContent = '✎';
+    edit.title = '名前・URLを編集';
+    edit.setAttribute('aria-label', `${a.name} の名前・URLを編集`);
+    edit.onclick = () => openDialog(a);
+    li.append(body, edit, del);
     ul.append(li);
   });
 
@@ -353,7 +362,7 @@ async function loadApps() {
   const label = document.createElement('span');
   label.textContent = 'アプリを追加';
   addBtn.append(plus, label);
-  addBtn.onclick = () => { $('addForm').reset(); $('addDialog').showModal(); $('appName').focus(); };
+  addBtn.onclick = () => openDialog(null);
   addLi.append(addBtn);
   ul.append(addLi);
 }
@@ -390,6 +399,22 @@ $('signupBtn').onclick = async () => {
 $('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
 $('logoutBtn').onclick = () => sb.auth.signOut();
 
+// 追加・編集の共通ダイアログ。app を渡すと編集、null なら追加
+let editingId = null;
+function openDialog(app) {
+  editingId = app ? app.id : null;
+  $('addForm').reset();
+  $('dialogTitle').textContent = app ? 'アプリを編集' : 'アプリを追加';
+  $('appAddBtn').textContent = app ? '保存する' : '追加する';
+  if (app) {
+    $('appName').value = app.name;
+    $('appUrl').value = app.url || '';
+    $('appDesc').value = app.description || '';
+  }
+  $('addDialog').showModal();
+  $('appName').focus();
+}
+
 $('cancelBtn').onclick = () => $('addDialog').close();
 // ダイアログの外側（背景）をクリックしたら閉じる
 $('addDialog').addEventListener('click', (e) => { if (e.target === $('addDialog')) $('addDialog').close(); });
@@ -401,10 +426,14 @@ $('addForm').addEventListener('submit', async (e) => {
   const url = $('appUrl').value.trim();
   if (url && !/^https?:\/\//i.test(url)) return show('URLは http:// または https:// で始めてください。');
   show('');
-  const { error } = await sb.from('apps').insert({ name, url: url || null, description: $('appDesc').value.trim() || null });
+  const row = { name, url: url || null, description: $('appDesc').value.trim() || null };
+  const { error } = editingId
+    ? await sb.from('apps').update(row).eq('id', editingId)
+    : await sb.from('apps').insert(row);
   if (error) return show(error.code === '23505' ? '同じ名前のアプリが既にあります。' : error.message);
   $('addDialog').close();
-  show(`「${name}」を追加しました。`, false);
+  show(`「${name}」を${editingId ? '保存' : '追加'}しました。`, false);
+  if (editingId) loadApps(); // 更新は即時に画面へ反映する
 });
 </script>
 </body>
