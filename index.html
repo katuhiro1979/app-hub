@@ -114,7 +114,14 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .login p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
   .login .field { margin-bottom: 10px; text-align: left; }
   .login .btn.primary { width: 100%; margin-top: 4px; }
-  .login .link { margin-top: 8px; }
+  .login .link { margin-top: 18px; }
+  .login-msg { margin: 0 0 10px; font-size: 14px; text-align: left; color: var(--danger); font-weight: 600; }
+  .login-msg.ok { color: var(--text); font-weight: 500; }
+  .dlg-err { margin: 14px 0 0; font-size: 14px; color: var(--danger); font-weight: 600; }
+  .load-err {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 14px;
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 14px;
+  }
 
   /* ---- アプリ一覧 ---- */
   .section-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
@@ -249,10 +256,13 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     </div>
     <h2>アプリ管理</h2>
     <p>ログインして自作アプリを開きます</p>
-    <input id="email" class="field" type="email" placeholder="メールアドレス" autocomplete="email" aria-label="メールアドレス">
-    <input id="password" class="field" type="password" placeholder="パスワード（6文字以上）" autocomplete="current-password" aria-label="パスワード">
-    <button id="loginBtn" class="btn primary">ログイン</button>
-    <button id="signupBtn" class="link">はじめての方は新規登録</button>
+    <form id="loginForm" novalidate>
+      <input id="email" class="field" type="email" placeholder="メールアドレス" autocomplete="email" aria-label="メールアドレス">
+      <input id="password" class="field" type="password" placeholder="パスワード（6文字以上）" autocomplete="current-password" aria-label="パスワード">
+      <div id="loginMsg" class="login-msg hidden" role="alert"></div>
+      <button id="loginBtn" type="submit" class="btn primary">ログイン</button>
+      <button id="signupBtn" type="button" class="link">はじめての方は新規登録</button>
+    </form>
   </main>
 
   <!-- メイン画面 -->
@@ -274,7 +284,11 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     <div id="searchWrap" class="search hidden">
       <input id="search" class="field" type="search" placeholder="アプリを検索" aria-label="アプリを検索" autocomplete="off">
     </div>
-    <p id="empty" class="empty hidden">まだアプリがありません。下の「＋」から追加しましょう。</p>
+    <p id="empty" class="empty hidden">まだアプリがありません。下の「アプリを追加」から追加しましょう。</p>
+    <div id="loadErr" class="load-err hidden" role="alert">
+      <span>読み込めませんでした。通信を確認してください。</span>
+      <button id="retryBtn" type="button" class="btn">再読み込み</button>
+    </div>
     <p id="nohit" class="nohit hidden">一致するアプリがありません。</p>
     <ul id="appList" class="grid"></ul>
   </main>
@@ -282,7 +296,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
 
 <!-- アプリ追加・編集ダイアログ -->
 <dialog id="addDialog" aria-labelledby="dialogTitle">
-  <form id="addForm" method="dialog">
+  <form id="addForm" method="dialog" novalidate>
     <h3 id="dialogTitle">アプリを追加</h3>
     <label for="appName">アプリ名</label>
     <input id="appName" class="field" placeholder="例：出勤簿" required maxlength="40">
@@ -290,6 +304,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     <input id="appUrl" class="field" type="url" inputmode="url" placeholder="https://example.github.io/app/">
     <label for="appDesc">説明（任意）</label>
     <input id="appDesc" class="field" placeholder="例：勤怠の記録" maxlength="80">
+    <p id="dlgErr" class="dlg-err hidden" role="alert"></p>
     <div class="row">
       <button type="button" id="cancelBtn" class="btn">キャンセル</button>
       <button type="submit" id="appAddBtn" class="btn primary">追加する</button>
@@ -447,6 +462,7 @@ function hostOf(url) {
 
 let apps = [];
 let query = '';
+let loadFailed = false; // 一覧の読み込みに失敗している間は「アプリがありません」と出さない
 
 // 読み込み中の仮表示
 function renderSkeleton() {
@@ -462,19 +478,35 @@ function renderSkeleton() {
 }
 
 // 一覧から外す。DBの行を消すだけで、アプリ本体やそのデータは消えない。元に戻すと行を入れ直す
+// 続けて削除したときは、トーストの表示中に外した分をまとめて元に戻せるようにする
+let trash = [];
+let trashTimer = null;
+const deleting = new Set();
 async function deleteApp(a) {
+  if (deleting.has(a.id)) return; // 連打による二重実行を防ぐ
+  deleting.add(a.id);
   const { error } = await sb.from('apps').delete().eq('id', a.id);
+  deleting.delete(a.id);
   if (error) return show(error.message);
   apps = apps.filter((x) => x.id !== a.id);
   render();
-  show(`「${a.name}」を一覧から外しました。`, false, {
+  trash.push(a);
+  clearTimeout(trashTimer);
+  trashTimer = setTimeout(() => { trash = []; }, 8000);
+  show(trash.length === 1 ? `「${a.name}」を一覧から外しました。` : `${trash.length} 件を一覧から外しました。`, false, {
     label: '元に戻す',
     run: async () => {
-      const row = { name: a.name, url: a.url, description: a.description, created_at: a.created_at };
-      const { error: e2 } = await sb.from('apps').insert(row);
-      if (e2) return show(e2.code === '23505' ? '同じ名前のアプリが既にあります。' : e2.message);
+      const items = trash; // 先に空にして、ボタンの連打で二重に入れ直さない
+      trash = [];
+      clearTimeout(trashTimer);
+      let failed = '';
+      for (const x of items) {
+        const row = { name: x.name, url: x.url, description: x.description, created_at: x.created_at };
+        const { error: e2 } = await sb.from('apps').insert(row);
+        if (e2) failed = e2.code === '23505' ? `「${x.name}」と同じ名前のアプリが既にあります。` : e2.message;
+      }
       await loadApps();
-      show('元に戻しました。', false);
+      if (failed) show(failed); else show('元に戻しました。', false);
     },
   });
 }
@@ -490,7 +522,8 @@ function render() {
     ? apps.filter((a) => `${a.name} ${a.description || ''} ${hostOf(a.url || '')}`.toLowerCase().includes(q))
     : apps;
   $('count').textContent = !apps.length ? '' : q ? `${list.length} / ${apps.length} 件` : `${apps.length} 件`;
-  $('empty').classList.toggle('hidden', apps.length > 0);
+  $('empty').classList.toggle('hidden', apps.length > 0 || loadFailed);
+  $('loadErr').classList.toggle('hidden', !loadFailed);
   $('nohit').classList.toggle('hidden', !(apps.length > 0 && list.length === 0));
 
   list.forEach((a) => {
@@ -572,12 +605,29 @@ function render() {
 }
 
 // アプリ一覧を再取得して描画
+// 応答が前後しても、最後に要求した結果だけを反映する
+let loadSeq = 0;
 async function loadApps() {
+  const my = ++loadSeq;
   const { data, error } = await sb.from('apps').select('*').order('created_at');
-  if (error) { show(error.message); render(); return; }
+  if (my !== loadSeq) return;
+  if (error) {
+    show(error.message);
+    loadFailed = apps.length === 0; // 表示中の一覧があれば、そのまま残す
+    render();
+    return;
+  }
+  loadFailed = false;
   apps = data;
   render();
 }
+// 他端末の変更通知は、短い間にまとまって届くことがあるので間引く
+let reloadTimer = null;
+function reloadSoon() {
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(loadApps, 150);
+}
+$('retryBtn').onclick = () => { renderSkeleton(); loadApps(); };
 
 $('search').addEventListener('input', (e) => { query = e.target.value; render(); });
 
@@ -592,30 +642,51 @@ function applySession(session) {
     userEmail = session.user.email;
     apps = [];
     query = '';
+    loadFailed = false;
     $('search').value = '';
     renderSkeleton();
     loadApps();
     // 他端末での追加・削除を検知して再読み込み
     channel = sb.channel('apps-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'apps' }, loadApps)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'apps' }, reloadSoon)
       .subscribe();
   }
 }
 
-sb.auth.onAuthStateChange((_e, session) => applySession(session));
+// トークン更新やタブ復帰でも同じユーザーのまま通知が来るので、ログイン・ログアウトの変化だけ処理する
+let sessionKey;
+let sessionApplied = false;
+sb.auth.onAuthStateChange((_e, session) => {
+  const key = session ? (session.user.id || session.user.email) : null;
+  if (sessionApplied && key === sessionKey) return;
+  sessionApplied = true;
+  sessionKey = key;
+  applySession(session);
+});
 
-$('loginBtn').onclick = async () => {
-  show('');
-  const { error } = await sb.auth.signInWithPassword({ email: $('email').value, password: $('password').value });
-  if (error) show(error.message);
-};
-$('signupBtn').onclick = async () => {
-  show('');
-  const { error } = await sb.auth.signUp({ email: $('email').value, password: $('password').value });
-  if (error) show(error.message);
-  else show('登録しました。確認メールが届いた場合はリンクを開いてからログインしてください。', false);
-};
-$('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
+// ログイン画面のメッセージは入力欄のすぐ下に出す（二重送信も防ぐ）
+function loginMsg(m, ok = false) {
+  const el = $('loginMsg');
+  el.textContent = m;
+  el.classList.toggle('ok', ok);
+  el.classList.toggle('hidden', !m);
+}
+async function authRun(fn, okMsg) {
+  loginMsg('');
+  $('loginBtn').disabled = $('signupBtn').disabled = true;
+  try {
+    const { error } = await fn({ email: $('email').value.trim(), password: $('password').value });
+    if (error) loginMsg(error.message);
+    else if (okMsg) loginMsg(okMsg, true);
+  } finally {
+    $('loginBtn').disabled = $('signupBtn').disabled = false;
+  }
+}
+$('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  authRun((c) => sb.auth.signInWithPassword(c));
+});
+$('signupBtn').onclick = () => authRun((c) => sb.auth.signUp(c), '登録しました。確認メールが届いた場合はリンクを開いてからログインしてください。');
 
 // 追加・編集の共通ダイアログ。app を渡すと編集、null なら追加
 let editingId = null;
@@ -623,6 +694,7 @@ function openDialog(app) {
   closeMenu(false);
   editingId = app ? app.id : null;
   $('addForm').reset();
+  dlgErr('');
   $('dialogTitle').textContent = app ? 'アプリを編集' : 'アプリを追加';
   $('appAddBtn').textContent = app ? '保存する' : '追加する';
   if (app) {
@@ -638,21 +710,47 @@ $('cancelBtn').onclick = () => $('addDialog').close();
 // ダイアログの外側（背景）をクリックしたら閉じる
 $('addDialog').addEventListener('click', (e) => { if (e.target === $('addDialog')) $('addDialog').close(); });
 
+// ダイアログの中のエラー表示（トーストはダイアログの背面に隠れるため、ここに出す）
+function dlgErr(m) {
+  $('dlgErr').textContent = m;
+  $('dlgErr').classList.toggle('hidden', !m);
+}
+// http(s) のURLだけを許可する
+function validUrl(s) {
+  try { return /^https?:$/.test(new URL(s).protocol); } catch (e) { return false; }
+}
+
+let saving = false;
 $('addForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (saving) return; // 連打による二重送信を防ぐ
   const name = $('appName').value.trim();
-  if (!name) return;
+  if (!name) return dlgErr('アプリ名を入力してください。');
   const url = $('appUrl').value.trim();
-  if (url && !/^https?:\/\//i.test(url)) return show('URLは http:// または https:// で始めてください。');
-  show('');
+  if (url && !validUrl(url)) return dlgErr('URLは http:// または https:// で始まる正しい形式で入力してください。');
+  dlgErr('');
   const row = { name, url: url || null, description: $('appDesc').value.trim() || null };
-  const { error } = editingId
-    ? await sb.from('apps').update(row).eq('id', editingId)
-    : await sb.from('apps').insert(row);
-  if (error) return show(error.code === '23505' ? '同じ名前のアプリが既にあります。' : error.message);
-  $('addDialog').close();
-  show(`「${name}」を${editingId ? '保存' : '追加'}しました。`, false);
-  loadApps(); // 追加・更新を即時に画面へ反映する
+  saving = true;
+  $('appAddBtn').disabled = true;
+  try {
+    let res;
+    if (editingId) {
+      // 更新された行を返させて、他端末で削除済みでないか確かめる
+      res = await sb.from('apps').update(row).eq('id', editingId).select();
+      if (!res.error && (!res.data || res.data.length === 0)) {
+        return dlgErr('このアプリはすでに一覧から削除されています。閉じて一覧を確認してください。');
+      }
+    } else {
+      res = await sb.from('apps').insert(row);
+    }
+    if (res.error) return dlgErr(res.error.code === '23505' ? '同じ名前のアプリが既にあります。' : res.error.message);
+    $('addDialog').close();
+    show(`「${name}」を${editingId ? '保存' : '追加'}しました。`, false);
+    loadApps(); // 追加・更新を即時に画面へ反映する
+  } finally {
+    saving = false;
+    $('appAddBtn').disabled = false;
+  }
 });
 </script>
 </body>
