@@ -3,45 +3,56 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
 <title>アプリ管理</title>
+<script>
+// 保存済みのテーマを描画前に反映（ちらつき防止）
+try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --bg: #f4f5fb;
-    --bg-glow-1: rgba(99, 102, 241, .16);
-    --bg-glow-2: rgba(236, 72, 153, .12);
-    --surface: rgba(255, 255, 255, .78);
-    --surface-solid: #ffffff;
-    --border: rgba(15, 23, 42, .08);
-    --text: #0f172a;
-    --muted: #64748b;
-    --accent: #6366f1;
-    --accent-2: #8b5cf6;
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #eceef2;
+    --border: #e1e4ea;
+    --text: #14161c;
+    --muted: #5f6673;
+    --accent: #4f46e5;
     --accent-text: #ffffff;
-    --danger: #e11d48;
-    --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .06);
-    --shadow-hover: 0 2px 4px rgba(15, 23, 42, .08), 0 16px 36px rgba(99, 102, 241, .18);
-    --radius: 20px;
+    --danger: #d1264a;
+    --shadow: 0 1px 2px rgba(20, 22, 28, .05);
+    --shadow-pop: 0 10px 30px rgba(20, 22, 28, .2);
+    --radius: 16px;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #0f1117;
-      --bg-glow-1: rgba(99, 102, 241, .22);
-      --bg-glow-2: rgba(236, 72, 153, .14);
-      --surface: rgba(30, 33, 44, .72);
-      --surface-solid: #1a1d27;
-      --border: rgba(255, 255, 255, .09);
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #818cf8;
-      --accent-2: #a78bfa;
-      --accent-text: #0f1117;
-      --danger: #fb7185;
-      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
-      --shadow-hover: 0 2px 4px rgba(0, 0, 0, .5), 0 16px 36px rgba(129, 140, 248, .22);
+      --surface: #181b24;
+      --surface-2: #232734;
+      --border: #2a2f3d;
+      --text: #eef0f5;
+      --muted: #9aa3b5;
+      --accent: #8b93ff;
+      --accent-text: #10121a;
+      --danger: #ff7a93;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .35);
+      --shadow-pop: 0 10px 30px rgba(0, 0, 0, .5);
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117;
+    --surface: #181b24;
+    --surface-2: #232734;
+    --border: #2a2f3d;
+    --text: #eef0f5;
+    --muted: #9aa3b5;
+    --accent: #8b93ff;
+    --accent-text: #10121a;
+    --danger: #ff7a93;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    --shadow-pop: 0 10px 30px rgba(0, 0, 0, .5);
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -49,14 +60,10 @@
     margin: 0;
     min-height: 100vh;
     min-height: 100dvh;
+    background: var(--bg);
     color: var(--text);
     font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
     line-height: 1.6;
-    background:
-      radial-gradient(60rem 30rem at 10% -10%, var(--bg-glow-1), transparent 60%),
-      radial-gradient(50rem 28rem at 100% 0%, var(--bg-glow-2), transparent 60%),
-      var(--bg);
-    background-attachment: fixed;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -65,119 +72,167 @@
   /* ---- ボタン・入力 ---- */
   button, input { font: inherit; color: inherit; }
   .btn {
-    appearance: none; border: 1px solid var(--border); background: var(--surface-solid); color: var(--text);
-    padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer;
-    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    appearance: none; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    min-height: 44px; padding: 0 18px; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
   }
-  .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
-  .btn:active { transform: translateY(0); }
-  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-text); border-color: transparent; }
-  .btn.small { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
-  .btn:focus-visible, .field:focus-visible, .card a:focus-visible, .del:focus-visible, .add-card:focus-visible {
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  .btn.primary:hover { background: var(--accent); filter: brightness(1.08); }
+  .link {
+    appearance: none; border: none; background: none; cursor: pointer; min-height: 44px; padding: 0 12px;
+    color: var(--muted); font-size: 14px; border-radius: 10px;
+  }
+  .link:hover { color: var(--text); text-decoration: underline; }
+  .btn:focus-visible, .field:focus-visible, .link:focus-visible, .main:focus-visible, .more:focus-visible,
+  .menu-item:focus-visible, .add-card:focus-visible, .toast-act:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px;
   }
   .field {
-    width: 100%; padding: 12px 14px; font-size: 16px; /* 16px未満だとiPhoneで拡大される */
-    border: 1px solid var(--border); border-radius: 12px; background: var(--surface-solid); color: var(--text);
+    width: 100%; min-height: 46px; padding: 10px 14px; font-size: 16px; /* 16px未満だとiPhoneで拡大される */
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text);
   }
   .field::placeholder { color: var(--muted); }
   label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
 
   /* ---- ヘッダー ---- */
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
   .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .logo {
-    width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; color: #fff;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 6px 16px rgba(99, 102, 241, .35);
+    width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-text);
   }
-  h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
-  .user { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .chip {
-    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--muted);
-    padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); backdrop-filter: blur(10px);
-  }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .02em; }
 
   /* ---- ログイン ---- */
   .login {
-    max-width: 400px; margin: 12vh auto 0; padding: 28px 24px; text-align: center;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow); backdrop-filter: blur(16px);
+    max-width: 400px; margin: 12vh auto 0; padding: 28px 24px 20px; text-align: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow);
   }
   .login .logo { width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 14px; }
   .login h2 { margin: 0 0 4px; font-size: 20px; }
   .login p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
   .login .field { margin-bottom: 10px; text-align: left; }
-  .login .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .login .btn.primary { width: 100%; margin-top: 4px; }
+  .login .link { margin-top: 8px; }
 
   /* ---- アプリ一覧 ---- */
-  .section-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 14px; }
-  .section-title h2 { margin: 0; font-size: 15px; color: var(--muted); font-weight: 700; letter-spacing: .06em; }
+  .section-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
+  .section-title h2 { margin: 0; font-size: 13px; color: var(--muted); font-weight: 700; letter-spacing: .08em; }
   .count { font-size: 13px; color: var(--muted); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+  .search { margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
   .grid > li { min-width: 0; } /* 長い文字で列が広がって横にはみ出すのを防ぐ */
   .card {
     position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    box-shadow: var(--shadow); backdrop-filter: blur(14px);
-    transition: transform .2s ease, box-shadow .2s ease; animation: rise .45s ease both;
+    box-shadow: var(--shadow); transition: border-color .15s ease, background .15s ease; animation: rise .25s ease both;
   }
-  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
-  .card a, .card .nolink {
-    display: block; padding: 18px 16px 16px; color: inherit; text-decoration: none; border-radius: var(--radius); height: 100%;
+  @media (hover: hover) { .card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); } }
+  .main {
+    appearance: none; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; height: 100%; margin: 0; border: none; background: none; text-align: left; cursor: pointer;
+    padding: 16px; color: inherit; text-decoration: none; border-radius: var(--radius);
   }
   .icon {
-    width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; margin-bottom: 14px;
-    font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+    width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 12px; flex: none;
+    font-size: 21px; font-weight: 800; color: #fff;
   }
-  .name { font-weight: 700; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; }
+  .text { min-width: 0; }
+  .name { font-weight: 700; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; padding-right: 36px; }
   .desc {
     margin-top: 4px; font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .host { margin-top: 10px; font-size: 12px; color: var(--muted); opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nolink { opacity: .7; }
-  .del {
-    position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 10px; border: none; cursor: pointer;
-    background: transparent; color: var(--muted); font-size: 18px; line-height: 1; display: grid; place-items: center;
-    opacity: 0; transition: opacity .15s ease, background .15s ease, color .15s ease;
+  .host { margin-top: 8px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 600; margin-right: 6px;
+    background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger);
   }
-  .edit { right: 42px; font-size: 15px; }
-  .edit:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
-  .card:hover .del, .del:focus-visible { opacity: 1; }
-  .del:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
-  @media (hover: none) { .del { opacity: .55; } } /* スマホには常に薄く表示 */
+  .more {
+    appearance: none; position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border: none; border-radius: 12px;
+    background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center;
+    transition: background .15s ease, color .15s ease;
+  }
+  .more:hover, .more[aria-expanded="true"] { background: var(--surface-2); color: var(--text); }
+  .top .more { position: static; transform: none; }
   .add-card {
-    min-height: 168px; border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius);
-    background: transparent; color: var(--accent); cursor: pointer; display: grid; place-content: center; justify-items: center; gap: 6px;
-    font-weight: 700; transition: background .2s ease, transform .2s ease;
+    width: 100%; min-height: 150px; border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius);
+    background: transparent; color: var(--accent); cursor: pointer; display: grid; place-content: center; justify-items: center; gap: 4px;
+    font-weight: 700; transition: background .15s ease;
   }
-  .add-card:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); transform: translateY(-2px); }
-  .add-card .plus { font-size: 30px; line-height: 1; }
-  .empty { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  .add-card:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .add-card .plus { font-size: 28px; line-height: 1; }
+  .empty, .nohit { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
 
-  /* ---- 追加ダイアログ ---- */
+  /* 読み込み中の仮表示 */
+  .skeleton { min-height: 150px; padding: 16px; box-shadow: none; }
+  .skeleton i { display: block; border-radius: 8px; background: var(--surface-2); animation: pulse 1.2s ease-in-out infinite; }
+  .skeleton .sk-icon { width: 48px; height: 48px; border-radius: 14px; margin-bottom: 14px; }
+  .skeleton .sk-line { height: 14px; width: 70%; margin-bottom: 8px; }
+  .skeleton .sk-line.short { width: 45%; }
+  @keyframes pulse { 50% { opacity: .5; } }
+
+  /* ---- 「⋯」メニュー ---- */
+  .menu {
+    position: fixed; z-index: 60; min-width: 190px; max-width: min(280px, calc(100vw - 16px)); padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-pop);
+    animation: pop .12s ease both;
+  }
+  .menu-head { padding: 8px 14px 6px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu-item {
+    appearance: none; display: block; width: 100%; min-height: 44px; padding: 0 14px; border: none; border-radius: 10px;
+    background: none; text-align: left; font-size: 15px; cursor: pointer;
+  }
+  .menu-item:hover, .menu-item:focus-visible { background: var(--surface-2); }
+  .menu-item.danger { color: var(--danger); }
+
+  /* ---- 追加・編集ダイアログ ---- */
   dialog {
     width: min(440px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 24px; padding: 24px;
-    background: var(--surface-solid); color: var(--text); box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+    background: var(--surface); color: var(--text); box-shadow: var(--shadow-pop); animation: pop .18s ease both;
   }
-  dialog::backdrop { background: rgba(15, 17, 23, .5); backdrop-filter: blur(4px); }
+  dialog::backdrop { background: rgba(15, 17, 23, .5); }
   dialog h3 { margin: 0 0 4px; font-size: 18px; }
   dialog .row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 
   /* ---- メッセージ ---- */
   .toast {
-    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 50;
-    max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 14px; font-size: 14px; font-weight: 600;
-    background: var(--text); color: var(--bg); box-shadow: var(--shadow-hover); animation: rise .25s ease both;
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70;
+    max-width: calc(100vw - 32px); display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 18px;
+    border-radius: 14px; font-size: 14px; font-weight: 600;
+    background: var(--text); color: var(--bg); box-shadow: var(--shadow-pop); animation: toast-in .25s ease both;
   }
   .toast.error { background: var(--danger); color: #fff; }
+  .toast-act {
+    appearance: none; min-height: 36px; padding: 0 10px; border: 1px solid currentColor; border-radius: 10px;
+    background: none; color: inherit; font-weight: 700; cursor: pointer; flex: none;
+  }
   .warn { color: var(--danger); font-weight: 600; }
 
-  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .toast { animation-name: toast-in; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
-  @media (max-width: 480px) {
+
+  /* ---- スマホ: 1列の横長行、ダイアログは下から出るシート ---- */
+  @media (max-width: 600px) {
     .wrap { padding: 16px 14px 40px; }
-    .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .chip { display: none; }
+    .grid { grid-template-columns: 1fr; gap: 10px; }
+    .main { flex-direction: row; align-items: center; gap: 14px; padding: 12px 56px 12px 14px; }
+    .icon { margin-bottom: 0; }
+    .name { padding-right: 0; }
+    .more { top: 50%; transform: translateY(-50%); }
+    .add-card { min-height: 64px; grid-auto-flow: column; justify-content: center; gap: 10px; }
+    .skeleton { min-height: 76px; display: flex; gap: 14px; align-items: center; }
+    .skeleton .sk-icon { margin-bottom: 0; }
+    .skeleton .sk-text { flex: 1; }
+    dialog {
+      width: 100%; max-width: none; margin: auto 0 0; border-radius: 24px 24px 0 0; border-bottom: none;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); animation: sheet-in .25s ease both;
+    }
+    dialog form::before {
+      content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--border); margin: -8px auto 14px;
+    }
+    dialog .row .btn { flex: 1; }
   }
 </style>
 </head>
@@ -194,12 +249,10 @@
     </div>
     <h2>アプリ管理</h2>
     <p>ログインして自作アプリを開きます</p>
-    <input id="email" class="field" type="email" placeholder="メールアドレス" autocomplete="email">
-    <input id="password" class="field" type="password" placeholder="パスワード（6文字以上）" autocomplete="current-password">
-    <div class="actions">
-      <button id="loginBtn" class="btn primary">ログイン</button>
-      <button id="signupBtn" class="btn">新規登録</button>
-    </div>
+    <input id="email" class="field" type="email" placeholder="メールアドレス" autocomplete="email" aria-label="メールアドレス">
+    <input id="password" class="field" type="password" placeholder="パスワード（6文字以上）" autocomplete="current-password" aria-label="パスワード">
+    <button id="loginBtn" class="btn primary">ログイン</button>
+    <button id="signupBtn" class="link">はじめての方は新規登録</button>
   </main>
 
   <!-- メイン画面 -->
@@ -211,23 +264,24 @@
         </div>
         <h1>アプリ管理</h1>
       </div>
-      <div class="user">
-        <span id="userLabel" class="chip"></span>
-        <button id="logoutBtn" class="btn small">ログアウト</button>
-      </div>
+      <button id="userMenuBtn" class="more" type="button" aria-label="メニュー" aria-haspopup="menu" aria-expanded="false"></button>
     </header>
 
     <div class="section-title">
       <h2>MY APPS</h2>
       <span id="count" class="count"></span>
     </div>
+    <div id="searchWrap" class="search hidden">
+      <input id="search" class="field" type="search" placeholder="アプリを検索" aria-label="アプリを検索" autocomplete="off">
+    </div>
     <p id="empty" class="empty hidden">まだアプリがありません。下の「＋」から追加しましょう。</p>
+    <p id="nohit" class="nohit hidden">一致するアプリがありません。</p>
     <ul id="appList" class="grid"></ul>
   </main>
 </div>
 
-<!-- アプリ追加ダイアログ -->
-<dialog id="addDialog">
+<!-- アプリ追加・編集ダイアログ -->
+<dialog id="addDialog" aria-labelledby="dialogTitle">
   <form id="addForm" method="dialog">
     <h3 id="dialogTitle">アプリを追加</h3>
     <label for="appName">アプリ名</label>
@@ -252,16 +306,30 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const $ = (id) => document.getElementById(id);
 
-// 画面下に短いメッセージを出す（isError で赤色）
+// 「⋯」アイコン（固定の図形のみ）
+const DOTS = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+$('userMenuBtn').innerHTML = DOTS;
+
+// 画面下に短いメッセージを出す（isError で赤色、undo を渡すと「元に戻す」ボタン付き）
 let toastTimer = null;
-const show = (m, isError = true) => {
+const show = (m, isError = true, undo = null) => {
   const t = $('toast');
   clearTimeout(toastTimer);
   if (!m) { t.classList.add('hidden'); return; }
-  t.textContent = m;
+  const span = document.createElement('span');
+  span.textContent = m;
+  t.replaceChildren(span);
+  if (undo) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'toast-act';
+    b.textContent = undo.label;
+    b.onclick = () => { t.classList.add('hidden'); undo.run(); };
+    t.append(b);
+  }
   t.classList.toggle('error', isError);
   t.classList.remove('hidden');
-  toastTimer = setTimeout(() => t.classList.add('hidden'), 4500);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), undo ? 8000 : 4500);
 };
 
 if (SUPABASE_URL.startsWith('YOUR_')) {
@@ -273,11 +341,103 @@ if (SUPABASE_URL.startsWith('YOUR_')) {
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let channel = null;
 
-// アプリ名から、毎回同じになるアイコン色（グラデーション）を作る
-function iconStyle(name) {
+// ---- テーマ（自動 / ライト / ダーク）----
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_LABEL = { auto: '自動', light: 'ライト', dark: 'ダーク' };
+function getTheme() {
+  try { const t = localStorage.getItem('hub-theme'); if (THEMES.includes(t)) return t; } catch (e) {}
+  return 'auto';
+}
+function setTheme(t) {
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('hub-theme', t); } catch (e) {}
+}
+
+// ---- 「⋯」メニュー（画面に1つだけ）----
+let menuEl = null;
+let menuBtn = null;
+function closeMenu(returnFocus = true) {
+  if (!menuEl) return;
+  menuEl.remove();
+  menuEl = null;
+  if (menuBtn) {
+    menuBtn.setAttribute('aria-expanded', 'false');
+    if (returnFocus) menuBtn.focus();
+    menuBtn = null;
+  }
+}
+// items: [{label, run, danger}]。head は先頭に出す小さな見出し
+function openMenu(btn, items, head) {
+  if (menuBtn === btn) { closeMenu(); return; }
+  closeMenu(false);
+  const m = document.createElement('div');
+  m.className = 'menu';
+  m.setAttribute('role', 'menu');
+  if (head) {
+    const h = document.createElement('div');
+    h.className = 'menu-head';
+    h.textContent = head;
+    m.append(h);
+  }
+  items.forEach((it) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'menu-item' + (it.danger ? ' danger' : '');
+    b.setAttribute('role', 'menuitem');
+    b.textContent = it.label;
+    b.onclick = () => { closeMenu(false); it.run(); };
+    m.append(b);
+  });
+  document.body.append(m);
+  const r = btn.getBoundingClientRect();
+  const w = m.offsetWidth, h = m.offsetHeight;
+  const left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  m.style.left = left + 'px';
+  m.style.top = top + 'px';
+  menuEl = m;
+  menuBtn = btn;
+  btn.setAttribute('aria-expanded', 'true');
+  m.querySelector('.menu-item').focus();
+}
+document.addEventListener('pointerdown', (e) => {
+  if (menuEl && !menuEl.contains(e.target) && !(menuBtn && menuBtn.contains(e.target))) closeMenu(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (!menuEl) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeMenu(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const list = Array.from(menuEl.querySelectorAll('.menu-item'));
+    const i = list.indexOf(document.activeElement);
+    const next = e.key === 'ArrowDown' ? (i + 1) % list.length : (i - 1 + list.length) % list.length;
+    list[next].focus();
+  }
+});
+window.addEventListener('resize', () => closeMenu(false));
+window.addEventListener('scroll', () => closeMenu(false), true);
+
+// ヘッダーの「⋯」: ログイン中のメール・テーマ切替・ログアウト
+let userEmail = '';
+$('userMenuBtn').onclick = () => {
+  const cur = getTheme();
+  const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+  openMenu($('userMenuBtn'), [
+    { label: `テーマ：${THEME_LABEL[cur]}（タップで${THEME_LABEL[next]}へ）`, run: () => setTheme(next) },
+    { label: 'ログアウト', run: () => sb.auth.signOut() },
+  ], userEmail);
+};
+
+// ---- アプリ一覧 ----
+const PALETTE = ['#4f6bed', '#0f8f7e', '#b86a14', '#c2456b', '#7c5cc4', '#3f8f4f'];
+
+// アプリ名から、毎回同じアイコン色を選ぶ
+function iconColor(name) {
   let h = 0;
-  for (const ch of name) h = (h * 31 + ch.codePointAt(0)) % 360;
-  return `linear-gradient(135deg, hsl(${h} 75% 58%), hsl(${(h + 40) % 360} 75% 48%))`;
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)) % 997;
+  return PALETTE[h % PALETTE.length];
 }
 
 // URLからドメイン部分だけを取り出す（表示用）
@@ -285,68 +445,113 @@ function hostOf(url) {
   try { return new URL(url).host; } catch (e) { return ''; }
 }
 
-// アプリ一覧を再取得して描画
-async function loadApps() {
-  const { data, error } = await sb.from('apps').select('*').order('created_at');
-  if (error) return show(error.message);
+let apps = [];
+let query = '';
+
+// 読み込み中の仮表示
+function renderSkeleton() {
   const ul = $('appList');
-  ul.innerHTML = '';
-  $('count').textContent = data.length ? `${data.length} 件` : '';
-  $('empty').classList.toggle('hidden', data.length > 0);
-  data.forEach((a, i) => {
+  ul.replaceChildren();
+  for (let i = 0; i < 4; i++) {
+    const li = document.createElement('li');
+    li.className = 'card skeleton';
+    li.setAttribute('aria-hidden', 'true');
+    li.innerHTML = '<i class="sk-icon"></i><div class="sk-text"><i class="sk-line"></i><i class="sk-line short"></i></div>';
+    ul.append(li);
+  }
+}
+
+// 一覧から外す。DBの行を消すだけで、アプリ本体やそのデータは消えない。元に戻すと行を入れ直す
+async function deleteApp(a) {
+  const { error } = await sb.from('apps').delete().eq('id', a.id);
+  if (error) return show(error.message);
+  apps = apps.filter((x) => x.id !== a.id);
+  render();
+  show(`「${a.name}」を一覧から外しました。`, false, {
+    label: '元に戻す',
+    run: async () => {
+      const row = { name: a.name, url: a.url, description: a.description, created_at: a.created_at };
+      const { error: e2 } = await sb.from('apps').insert(row);
+      if (e2) return show(e2.code === '23505' ? '同じ名前のアプリが既にあります。' : e2.message);
+      await loadApps();
+      show('元に戻しました。', false);
+    },
+  });
+}
+
+function render() {
+  closeMenu(false);
+  const ul = $('appList');
+  ul.replaceChildren();
+  const showSearch = apps.length >= 6;
+  $('searchWrap').classList.toggle('hidden', !showSearch);
+  const q = showSearch ? query.trim().toLowerCase() : '';
+  const list = q
+    ? apps.filter((a) => `${a.name} ${a.description || ''} ${hostOf(a.url || '')}`.toLowerCase().includes(q))
+    : apps;
+  $('count').textContent = !apps.length ? '' : q ? `${list.length} / ${apps.length} 件` : `${apps.length} 件`;
+  $('empty').classList.toggle('hidden', apps.length > 0);
+  $('nohit').classList.toggle('hidden', !(apps.length > 0 && list.length === 0));
+
+  list.forEach((a) => {
     const li = document.createElement('li');
     li.className = 'card';
-    li.style.animationDelay = `${i * 40}ms`;
 
-    // URLが http(s) の場合のみリンク化（javascript: 等を防ぐ）
+    // URLが http(s) の場合のみリンク化（javascript: 等を防ぐ）。未設定はタップで編集を開く
     const isLink = /^https?:\/\//i.test(a.url || '');
-    const body = document.createElement(isLink ? 'a' : 'div');
+    let main;
     if (isLink) {
-      body.href = a.url;
-      body.target = '_blank';
-      body.rel = 'noopener';
+      main = document.createElement('a');
+      main.href = a.url;
+      main.target = '_blank';
+      main.rel = 'noopener';
     } else {
-      body.className = 'nolink';
+      main = document.createElement('button');
+      main.type = 'button';
+      main.onclick = () => openDialog(a);
     }
+    main.className = 'main';
     const icon = document.createElement('div');
     icon.className = 'icon';
-    icon.style.background = iconStyle(a.name);
+    icon.style.background = iconColor(a.name);
     icon.textContent = Array.from(a.name)[0] || '?';
+    const text = document.createElement('div');
+    text.className = 'text';
     const name = document.createElement('div');
     name.className = 'name';
     name.textContent = a.name;
-    body.append(icon, name);
+    text.append(name);
     if (a.description) {
       const d = document.createElement('div');
       d.className = 'desc';
       d.textContent = a.description;
-      body.append(d);
+      text.append(d);
     }
     const host = document.createElement('div');
     host.className = 'host';
-    host.textContent = isLink ? hostOf(a.url) : 'URL未設定';
-    body.append(host);
+    if (isLink) {
+      host.textContent = hostOf(a.url);
+    } else {
+      const b = document.createElement('span');
+      b.className = 'badge';
+      b.textContent = 'URL未設定';
+      host.append(b, 'タップして設定');
+    }
+    text.append(host);
+    main.append(icon, text);
 
-    const del = document.createElement('button');
-    del.className = 'del';
-    del.type = 'button';
-    del.textContent = '×';
-    del.title = '一覧から削除';
-    del.setAttribute('aria-label', `${a.name} を一覧から削除`);
-    // 一覧から外すだけで、アプリ本体やそのデータは消えない
-    del.onclick = async () => {
-      if (!confirm(`アプリ「${a.name}」を一覧から削除します。アプリ本体やそのデータは消えません。`)) return;
-      const { error } = await sb.from('apps').delete().eq('id', a.id);
-      if (error) show(error.message);
-    };
-    const edit = document.createElement('button');
-    edit.className = 'del edit';
-    edit.type = 'button';
-    edit.textContent = '✎';
-    edit.title = '名前・URLを編集';
-    edit.setAttribute('aria-label', `${a.name} の名前・URLを編集`);
-    edit.onclick = () => openDialog(a);
-    li.append(body, edit, del);
+    const more = document.createElement('button');
+    more.className = 'more';
+    more.type = 'button';
+    more.innerHTML = DOTS;
+    more.setAttribute('aria-label', `${a.name} のメニュー`);
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    more.onclick = () => openMenu(more, [
+      { label: '編集', run: () => openDialog(a) },
+      { label: '一覧から削除', danger: true, run: () => deleteApp(a) },
+    ]);
+    li.append(main, more);
     ul.append(li);
   });
 
@@ -355,7 +560,6 @@ async function loadApps() {
   const addBtn = document.createElement('button');
   addBtn.className = 'add-card';
   addBtn.type = 'button';
-  addBtn.style.width = '100%';
   const plus = document.createElement('span');
   plus.className = 'plus';
   plus.textContent = '＋';
@@ -367,14 +571,29 @@ async function loadApps() {
   ul.append(addLi);
 }
 
+// アプリ一覧を再取得して描画
+async function loadApps() {
+  const { data, error } = await sb.from('apps').select('*').order('created_at');
+  if (error) { show(error.message); render(); return; }
+  apps = data;
+  render();
+}
+
+$('search').addEventListener('input', (e) => { query = e.target.value; render(); });
+
 // 画面の切り替えとリアルタイム購読
 function applySession(session) {
   const loggedIn = !!session;
   $('loginView').classList.toggle('hidden', loggedIn);
   $('mainView').classList.toggle('hidden', !loggedIn);
   if (channel) { sb.removeChannel(channel); channel = null; }
+  closeMenu(false);
   if (loggedIn) {
-    $('userLabel').textContent = session.user.email;
+    userEmail = session.user.email;
+    apps = [];
+    query = '';
+    $('search').value = '';
+    renderSkeleton();
     loadApps();
     // 他端末での追加・削除を検知して再読み込み
     channel = sb.channel('apps-changes')
@@ -397,11 +616,11 @@ $('signupBtn').onclick = async () => {
   else show('登録しました。確認メールが届いた場合はリンクを開いてからログインしてください。', false);
 };
 $('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
-$('logoutBtn').onclick = () => sb.auth.signOut();
 
 // 追加・編集の共通ダイアログ。app を渡すと編集、null なら追加
 let editingId = null;
 function openDialog(app) {
+  closeMenu(false);
   editingId = app ? app.id : null;
   $('addForm').reset();
   $('dialogTitle').textContent = app ? 'アプリを編集' : 'アプリを追加';
@@ -433,7 +652,7 @@ $('addForm').addEventListener('submit', async (e) => {
   if (error) return show(error.code === '23505' ? '同じ名前のアプリが既にあります。' : error.message);
   $('addDialog').close();
   show(`「${name}」を${editingId ? '保存' : '追加'}しました。`, false);
-  if (editingId) loadApps(); // 更新は即時に画面へ反映する
+  loadApps(); // 追加・更新を即時に画面へ反映する
 });
 </script>
 </body>
