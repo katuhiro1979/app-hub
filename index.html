@@ -160,6 +160,13 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   }
   .more:hover, .more[aria-expanded="true"] { background: var(--surface-2); color: var(--text); }
   .top .more { position: static; transform: none; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .swatch {
+    appearance: none; width: 36px; height: 36px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; padding: 0;
+    color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;
+  }
+  .swatch.auto { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .swatch[aria-checked="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
   .grip {
     appearance: none; position: absolute; bottom: 6px; right: 6px; width: 36px; height: 36px; border: none; border-radius: 10px;
     background: transparent; color: var(--muted); cursor: grab; display: grid; place-items: center; touch-action: none;
@@ -314,6 +321,8 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     <input id="appUrl" class="field" type="url" inputmode="url" placeholder="https://example.github.io/app/">
     <label for="appDesc">説明（任意）</label>
     <input id="appDesc" class="field" placeholder="例：勤怠の記録" maxlength="80">
+    <label id="colorLabel">アイコンの色</label>
+    <div id="colorPick" class="swatches" role="radiogroup" aria-labelledby="colorLabel"></div>
     <p id="dlgErr" class="dlg-err hidden" role="alert"></p>
     <div class="row">
       <button type="button" id="cancelBtn" class="btn">キャンセル</button>
@@ -458,8 +467,13 @@ $('userMenuBtn').onclick = () => {
 // ---- アプリ一覧 ----
 const PALETTE = ['#4f6bed', '#0f8f7e', '#b86a14', '#c2456b', '#7c5cc4', '#3f8f4f'];
 
-// アプリ名から、毎回同じアイコン色を選ぶ
-function iconColor(name) {
+// 選べる色（自動の色分けとは別に持つ。PALETTE を変えると既存の自動色が変わるため）
+const PICK_COLORS = [...PALETTE, '#d1264a', '#64748b'];
+const colorOk = (c) => PICK_COLORS.includes(c);
+
+// 色を指定していれば、その色。なければアプリ名から毎回同じ色を選ぶ
+function iconColor(name, color) {
+  if (colorOk(color)) return color;
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.codePointAt(0)) % 997;
   return PALETTE[h % PALETTE.length];
@@ -511,7 +525,7 @@ async function deleteApp(a) {
       clearTimeout(trashTimer);
       let failed = '';
       for (const x of items) {
-        const row = { name: x.name, url: x.url, description: x.description, created_at: x.created_at, sort_order: x.sort_order };
+        const row = { name: x.name, url: x.url, description: x.description, created_at: x.created_at, sort_order: x.sort_order, color: x.color };
         const { error: e2 } = await sb.from('apps').insert(row);
         if (e2) failed = e2.code === '23505' ? `「${x.name}」と同じ名前のアプリが既にあります。` : e2.message;
       }
@@ -616,7 +630,7 @@ function render() {
     main.className = 'main';
     const icon = document.createElement('div');
     icon.className = 'icon';
-    icon.style.background = iconColor(a.name);
+    icon.style.background = iconColor(a.name, a.color);
     icon.textContent = Array.from(a.name)[0] || '?';
     const text = document.createElement('div');
     text.className = 'text';
@@ -778,6 +792,25 @@ $('signupBtn').onclick = () => authRun((c) => sb.auth.signUp(c), '登録しま�
 
 // 追加・編集の共通ダイアログ。app を渡すと編集、null なら追加
 let editingId = null;
+let pickedColor = null; // null は「自動」
+
+// 色の選択肢（先頭が「自動」）
+function renderSwatches() {
+  const box = $('colorPick');
+  box.replaceChildren();
+  [null, ...PICK_COLORS].forEach((c) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch' + (c ? '' : ' auto');
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(c === pickedColor));
+    b.setAttribute('aria-label', c ? `色 ${c}` : '自動');
+    if (c) b.style.background = c; else b.textContent = '自動';
+    b.onclick = () => { pickedColor = c; renderSwatches(); };
+    box.append(b);
+  });
+}
+
 function openDialog(app) {
   closeMenu(false);
   editingId = app ? app.id : null;
@@ -790,6 +823,8 @@ function openDialog(app) {
     $('appUrl').value = app.url || '';
     $('appDesc').value = app.description || '';
   }
+  pickedColor = app && colorOk(app.color) ? app.color : null;
+  renderSwatches();
   $('addDialog').showModal();
   $('appName').focus();
 }
@@ -817,7 +852,7 @@ $('addForm').addEventListener('submit', async (e) => {
   const url = $('appUrl').value.trim();
   if (url && !validUrl(url)) return dlgErr('URLは http:// または https:// で始まる正しい形式で入力してください。');
   dlgErr('');
-  const row = { name, url: url || null, description: $('appDesc').value.trim() || null };
+  const row = { name, url: url || null, description: $('appDesc').value.trim() || null, color: pickedColor };
   saving = true;
   $('appAddBtn').disabled = true;
   try {
