@@ -620,8 +620,8 @@ function render() {
     if (isLink) {
       main = document.createElement('a');
       main.href = a.url;
-      main.target = '_blank';
-      main.rel = 'noopener';
+      // アプリごとに決まった名前のタブで開く（開き直しても同じタブを使う）。noopener を付けると毎回新しいタブになるので付けない
+      main.target = 'app:' + a.url;
     } else {
       main = document.createElement('button');
       main.type = 'button';
