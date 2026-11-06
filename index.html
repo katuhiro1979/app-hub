@@ -595,6 +595,21 @@ function startDrag(e, li) {
   document.addEventListener('pointercancel', end);
 }
 
+// Windows のインターネットショートカット（.url）を保存する。デスクトップなどに置いてダブルクリックで開ける
+function saveShortcut(a) {
+  const url = a.url.replace(/[\r\n]/g, '');
+  const file = (a.name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').trim().slice(0, 80) || 'アプリ') + '.url';
+  const blob = new Blob([`[InternetShortcut]\r\nURL=${url}\r\n`], { type: 'application/octet-stream' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = file;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  show(`「${file}」を保存しました。デスクトップなどに置いて開けます。`, false);
+}
+
 function render() {
   closeMenu(false);
   const ul = $('appList');
@@ -671,6 +686,7 @@ function render() {
     if (!q && idx < apps.length - 1) moves.push({ label: '下へ', run: () => moveApp(a, 1) });
     more.onclick = () => openMenu(more, [
       { label: '編集', run: () => openDialog(a) },
+      ...(a.url && validUrl(a.url) ? [{ label: 'ショートカットを保存', run: () => saveShortcut(a) }] : []),
       ...moves,
       { label: '一覧から削除', danger: true, run: () => deleteApp(a) },
     ]);
