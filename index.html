@@ -167,6 +167,8 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;
   }
   .swatch.auto { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .swatch.iconpick { padding: 0; overflow: hidden; }
+  .swatch.iconpick img { width: 100%; height: 100%; display: block; }
   .swatch[aria-checked="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
   .grip {
     appearance: none; position: absolute; bottom: 6px; right: 6px; width: 36px; height: 36px; border: none; border-radius: 10px;
@@ -322,7 +324,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     <input id="appUrl" class="field" type="url" inputmode="url" placeholder="https://example.github.io/app/">
     <label for="appDesc">説明（任意）</label>
     <input id="appDesc" class="field" placeholder="例：勤怠の記録" maxlength="80">
-    <label id="colorLabel">アイコンの色</label>
+    <label id="colorLabel">アイコン（色・作成済みの画像）</label>
     <div id="colorPick" class="swatches" role="radiogroup" aria-labelledby="colorLabel"></div>
     <p id="dlgErr" class="dlg-err hidden" role="alert"></p>
     <div class="row">
@@ -471,6 +473,15 @@ const PALETTE = ['#4f6bed', '#0f8f7e', '#b86a14', '#c2456b', '#7c5cc4', '#3f8f4f
 // 選べる色（自動の色分けとは別に持つ。PALETTE を変えると既存の自動色が変わるため）
 const PICK_COLORS = [...PALETTE, '#d1264a', '#64748b'];
 const colorOk = (c) => PICK_COLORS.includes(c);
+
+// 作成済みのアイコン（my-apps 側の画像）。選ぶと color 列に "icon:ファイル名" で保存する（色と同時には選べない）
+const ICON_BASE = 'https://katuhiro1979.github.io/my-apps/';
+const ICON_CHOICES = [
+  ['shukkin', '出勤簿'], ['todo', 'ToDo'], ['soji', '掃除'], ['medical', '医療'], ['vehicle', '車両'], ['shoes', '靴'],
+  ['ipad', '端末'], ['lending', '貸出'], ['teiki', '定期券'], ['backup', 'バックアップ'], ['membership', '会員証'],
+];
+const iconKey = (c) => (typeof c === 'string' && c.startsWith('icon:') && ICON_CHOICES.some((x) => x[0] === c.slice(5)) ? c.slice(5) : '');
+const iconSrc = (c) => (iconKey(c) ? `${ICON_BASE}${iconKey(c)}-icon-192.png` : '');
 
 // 色を指定していれば、その色。なければアプリ名から毎回同じ色を選ぶ
 function iconColor(name, color) {
@@ -634,7 +645,9 @@ function render() {
     icon.style.background = iconColor(a.name, a.color);
     icon.textContent = Array.from(a.name)[0] || '?';
     // そのアプリ自身のアイコン画像があれば使う（なければ、頭文字＋色）
-    if (isLink && appIcons[a.url]) setIconImg(icon, appIcons[a.url]);
+    // 選んだアイコンがあればそれを最優先
+    if (iconSrc(a.color)) setIconImg(icon, iconSrc(a.color));
+    else if (isLink && appIcons[a.url]) setIconImg(icon, appIcons[a.url]);
     const text = document.createElement('div');
     text.className = 'text';
     const name = document.createElement('div');
@@ -750,7 +763,7 @@ function discoverIcons() {
       try { localStorage.setItem('hub-app-icons', JSON.stringify(appIcons)); } catch (e) {}
       document.querySelectorAll('#appList li.card').forEach((li) => {
         const x = apps.find((y) => y.id === li.dataset.id);
-        if (x && x.url === a.url) setIconImg(li.querySelector('.icon'), src);
+        if (x && x.url === a.url && !iconSrc(x.color)) setIconImg(li.querySelector('.icon'), src);
       });
     });
   });
@@ -859,6 +872,23 @@ function renderSwatches() {
     b.onclick = () => { pickedColor = c; renderSwatches(); };
     box.append(b);
   });
+  // 作成済みのアイコン
+  ICON_CHOICES.forEach(([key, label]) => {
+    const v = 'icon:' + key;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch iconpick';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(v === pickedColor));
+    b.setAttribute('aria-label', `アイコン ${label}`);
+    b.title = label;
+    const im = document.createElement('img');
+    im.src = `${ICON_BASE}${key}-icon-192.png`;
+    im.alt = '';
+    b.append(im);
+    b.onclick = () => { pickedColor = v; renderSwatches(); };
+    box.append(b);
+  });
 }
 
 function openDialog(app) {
@@ -873,7 +903,7 @@ function openDialog(app) {
     $('appUrl').value = app.url || '';
     $('appDesc').value = app.description || '';
   }
-  pickedColor = app && colorOk(app.color) ? app.color : null;
+  pickedColor = app && (colorOk(app.color) || iconKey(app.color)) ? app.color : null;
   renderSwatches();
   $('addDialog').showModal();
   $('appName').focus();
