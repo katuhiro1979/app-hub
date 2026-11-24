@@ -11,6 +11,7 @@
 try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="today-logic.js"></script>
 <style>
   :root {
     --bg: #f5f6f8;
@@ -122,6 +123,47 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 14px;
     padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 14px;
   }
+
+  /* ---- 今日の枠（読み取り専用） ---- */
+  .today { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px 14px 10px; margin: 0 0 22px; }
+  .today-bar { display: flex; align-items: center; gap: 8px; }
+  .today-head { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+  .today-head:focus-visible, .today a:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; border-radius: 6px; }
+  .today-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+  .today-date { font-size: 17px; font-weight: 700; }
+  .today-chev { margin-left: auto; color: var(--muted); transition: transform .15s; }
+  .today-head[aria-expanded="false"] .today-chev { transform: rotate(-90deg); }
+  .today-sec { margin: 6px 0 0; }
+  .today-sec h3 { margin: 12px 0 4px; font-size: 14px; color: var(--text); font-weight: 700; }
+  .today-sec.overdue h3 { color: var(--danger); }
+  .today-sec ul { list-style: none; margin: 0; padding: 0; }
+  .today-sec ul.open { max-height: 50vh; overflow-y: auto; overscroll-behavior: contain; }
+  .today-sec li { display: flex; gap: 8px; align-items: center; min-height: 44px; border-top: 1px solid var(--border); font-size: 15px; }
+  .today-sec li:first-child { border-top: 0; }
+  .today-sec li a, .today-sec li > span.t { display: flex; align-items: center; flex: 1; min-width: 0; min-height: 44px; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
+  .today-sec li a:hover { text-decoration: underline; }
+  .today-time { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .today-date-sm { flex: none; color: var(--danger); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .today { --c-amber-bg:#fbe8b8;--c-amber-fg:#6b4500;--c-green-bg:#dcefe2;--c-green-fg:#1f6b3b;--c-blue-bg:#dce9f6;--c-blue-fg:#27598a;--c-red-bg:#f9dedb;--c-red-fg:#a3231b;--c-purple-bg:#e9e0f5;--c-purple-fg:#5b3a8c;--c-pink-bg:#f9e0ec;--c-pink-fg:#a02b63;--c-teal-bg:#d6eeee;--c-teal-fg:#1b6567;--c-gray-bg:#e6e8e4;--c-gray-fg:#4b554f; } /* ToDo のグループの色（ToDo と同じ配色） */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .today { --c-amber-bg:#3a2c0e;--c-amber-fg:#f0b955;--c-green-bg:#1d3326;--c-green-fg:#7fd1a0;--c-blue-bg:#1d2b3a;--c-blue-fg:#8fb8e8;--c-red-bg:#3e1d1a;--c-red-fg:#ff8a80;--c-purple-bg:#2f2442;--c-purple-fg:#c8aef0;--c-pink-bg:#411f30;--c-pink-fg:#f2a6c6;--c-teal-bg:#173434;--c-teal-fg:#7fd0d0;--c-gray-bg:#2a2f2b;--c-gray-fg:#b6beb8; }
+  }
+  :root[data-theme="dark"] .today { --c-amber-bg:#3a2c0e;--c-amber-fg:#f0b955;--c-green-bg:#1d3326;--c-green-fg:#7fd1a0;--c-blue-bg:#1d2b3a;--c-blue-fg:#8fb8e8;--c-red-bg:#3e1d1a;--c-red-fg:#ff8a80;--c-purple-bg:#2f2442;--c-purple-fg:#c8aef0;--c-pink-bg:#411f30;--c-pink-fg:#f2a6c6;--c-teal-bg:#173434;--c-teal-fg:#7fd0d0;--c-gray-bg:#2a2f2b;--c-gray-fg:#b6beb8; }
+  /* 札の背景は ToDo の色を薄めて使う（文字色は ToDo のまま） */
+  .today-tag.c-amber { background: color-mix(in srgb, var(--c-amber-bg) 55%, transparent); color: var(--c-amber-fg); border-color: transparent; }
+  .today-tag.c-green { background: color-mix(in srgb, var(--c-green-bg) 55%, transparent); color: var(--c-green-fg); border-color: transparent; }
+  .today-tag.c-blue { background: color-mix(in srgb, var(--c-blue-bg) 55%, transparent); color: var(--c-blue-fg); border-color: transparent; }
+  .today-tag.c-red { background: color-mix(in srgb, var(--c-red-bg) 55%, transparent); color: var(--c-red-fg); border-color: transparent; }
+  .today-tag.c-purple { background: color-mix(in srgb, var(--c-purple-bg) 55%, transparent); color: var(--c-purple-fg); border-color: transparent; }
+  .today-tag.c-pink { background: color-mix(in srgb, var(--c-pink-bg) 55%, transparent); color: var(--c-pink-fg); border-color: transparent; }
+  .today-tag.c-teal { background: color-mix(in srgb, var(--c-teal-bg) 55%, transparent); color: var(--c-teal-fg); border-color: transparent; }
+  .today-tag.c-gray { background: color-mix(in srgb, var(--c-gray-bg) 55%, transparent); color: var(--c-gray-fg); border-color: transparent; }
+  .today-tag { flex: none; font-weight: 600; font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+  .today-sec .btn { margin: 6px 0 2px; min-height: 44px; padding: 4px 16px; font-size: 14px; }
+  .today-summary:not([hidden]) { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .today-msg { margin: 8px 0; font-size: 14px; color: var(--muted); }
+  .today-msg.err { color: var(--danger); font-weight: 600; }
+  .today-stamp { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 
   /* ---- アプリ一覧 ---- */
   .section-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
@@ -296,6 +338,18 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       </div>
       <button id="userMenuBtn" class="more" type="button" aria-label="メニュー" aria-haspopup="menu" aria-expanded="false"></button>
     </header>
+
+    <section id="todayBox" class="today hidden" aria-label="今日">
+      <div class="today-bar">
+        <button id="todayHead" class="today-head" type="button" aria-expanded="true" aria-controls="todayBody">
+          <span class="today-title">今日</span><span id="todayDate" class="today-date"></span><span id="todaySummary" class="today-summary" hidden></span>
+          <svg class="today-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <button id="todayRefresh" class="btn" type="button">更新</button>
+      </div>
+      <div id="todayBody" aria-live="polite"></div>
+      <p id="todayStamp" class="today-stamp"></p>
+    </section>
 
     <div class="section-title">
       <h2>MY APPS</h2>
@@ -785,14 +839,189 @@ async function loadApps() {
   loadFailed = false;
   apps = data;
   render();
+  if (todayState.loadedAt) renderToday(todayState); // 一覧が後から届いたときも、リンク先を反映する
 }
 // 他端末の変更通知は、短い間にまとまって届くことがあるので間引く
 let reloadTimer = null;
 function reloadSoon() {
   clearTimeout(reloadTimer);
-  reloadTimer = setTimeout(() => { if (dragLi) reloadSoon(); else loadApps(); }, 150); // ドラッグ中は画面を作り直さない
+  reloadTimer = setTimeout(() => { if (dragLi) reloadSoon(); else { loadApps(); loadToday(); } }, 150); // ドラッグ中は画面を作り直さない
 }
 $('retryBtn').onclick = () => { renderSkeleton(); loadApps(); };
+
+// ---- 今日の枠（読み取り専用。app_kv は select だけ。書き込まない）----
+// day は「データを取った日」（pickTodo に渡した日付）。見出しも中身もこの日付で描く
+let todayState = { todo: { status: 'loading' }, loadedAt: null, day: '', warn: false };
+const TODAY_TEXT_MAX = 100;
+const TODAY_LIST_MAX = 5; // 項目が多いときは、各まとまりごとにここまで出す
+const todayOpen = { overdue: false, todo: false }; // 「さらに○件」を開いているか（更新しても保つ）
+
+// 枠を描く。state.todo.status は 'loading' | 'ok' | 'error'
+function renderToday(state) {
+  const box = $('todayBox'), body = $('todayBody');
+  const now = new Date();
+  $('todayDate').textContent = TodayLogic.formatHeading(state.day ? new Date(state.day + 'T00:00:00') : now);
+  body.replaceChildren();
+  const t = state.todo;
+  const msg = (text, err) => {
+    const p = document.createElement('p');
+    p.className = 'today-msg' + (err ? ' err' : '');
+    p.textContent = text;
+    return p;
+  };
+  if (t.status === 'loading') {
+    body.append(msg('読み込み中…'));
+  } else if (t.status === 'error') {
+    body.append(msg(t.message, true));
+    const b = document.createElement('button');
+    b.id = 'todayRetry'; b.type = 'button'; b.className = 'btn'; b.textContent = '再読み込み';
+    b.onclick = () => loadToday();
+    body.append(b);
+  } else if (!t.rows.overdue.length && !t.rows.today.length) {
+    if (state.warn) body.append(todayWarnEl(state));
+    body.append(msg('今日の予定はありません'));
+  } else {
+    if (state.warn) body.append(todayWarnEl(state));
+    const todoApp = apps.find((a) => a.name === 'ToDo');
+    const href = todoApp && /^https?:\/\//i.test(todoApp.url || '') ? todoApp.url : '';
+    const section = (kind, title, allRows, withDate) => {
+      if (!allRows.length) return;
+      const limit = TODAY_LIST_MAX;
+      const rows = todayOpen[kind] ? allRows : allRows.slice(0, limit);
+      const sec = document.createElement('div');
+      sec.className = 'today-sec' + (kind === 'overdue' ? ' overdue' : '');
+      sec.dataset.sec = kind;
+      const h = document.createElement('h3');
+      h.textContent = title + '（' + allRows.length + '）';
+      const ul = document.createElement('ul');
+      if (todayOpen[kind]) ul.className = 'open';
+      rows.forEach((r) => {
+        const li = document.createElement('li');
+        if (withDate) {
+          const d = document.createElement('span');
+          d.className = 'today-date-sm'; d.textContent = r.date.slice(5).replace('-', '/');
+          li.append(d);
+        } else if (r.time) {
+          const tm = document.createElement('span');
+          tm.className = 'today-time'; tm.textContent = r.time;
+          li.append(tm);
+        }
+        const flat = r.text.replace(/\s+/g, ' ').trim();
+        const label = flat.length > TODAY_TEXT_MAX ? flat.slice(0, TODAY_TEXT_MAX) + '…' : flat;
+        if (r.groupName) {
+          const g = document.createElement('span');
+          g.className = 'today-tag c-' + (r.groupColor || 'gray'); g.textContent = r.groupName;
+          li.append(g); // グループ名は題名の左側
+        }
+        let el;
+        if (href) {
+          el = document.createElement('a');
+          el.href = href; el.target = '_blank'; el.rel = 'noopener noreferrer';
+        } else {
+          el = document.createElement('span');
+          el.className = 't';
+        }
+        el.textContent = label;
+        if (flat.length > TODAY_TEXT_MAX) el.title = r.text;
+        li.append(el);
+        ul.append(li);
+      });
+      sec.append(h, ul);
+      if (allRows.length > limit) {
+        const more = document.createElement('button');
+        more.id = 'todayMore-' + kind; more.type = 'button'; more.className = 'btn';
+        more.textContent = todayOpen[kind] ? '閉じる' : 'さらに' + (allRows.length - limit) + '件を表示';
+        more.onclick = () => { todayOpen[kind] = !todayOpen[kind]; renderToday(todayState); };
+        sec.append(more);
+      }
+      body.append(sec);
+    };
+    section('overdue', '期限切れ', t.rows.overdue, true);
+    section('todo', 'ToDo', t.rows.today, false);
+  }
+  const at = state.loadedAt;
+  $('todayStamp').textContent = at ? '最終更新 ' + String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') : '';
+  box.classList.remove('hidden');
+  updateTodaySummary(state);
+}
+
+// 取得に失敗したが、前回の結果を残しているときの警告
+function todayWarnEl(state) {
+  const p = document.createElement('p');
+  p.id = 'todayWarn'; p.className = 'today-msg err'; p.setAttribute('role', 'alert');
+  const at = state.loadedAt;
+  p.textContent = '更新に失敗しました' + (at ? '（最終更新 ' + String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') + '）' : '');
+  return p;
+}
+
+// 折りたたんだときだけ、件数の要約を見出しに出す
+function updateTodaySummary(state) {
+  const el = $('todaySummary'), t = state.todo;
+  let text = '';
+  if (t.status === 'ok') {
+    const parts = [];
+    if (t.rows.overdue.length) parts.push('期限切れ' + t.rows.overdue.length);
+    if (t.rows.today.length) parts.push('今日' + t.rows.today.length);
+    text = parts.length ? parts.join('・') : '予定なし';
+  }
+  el.textContent = text;
+  el.hidden = !text || $('todayHead').getAttribute('aria-expanded') !== 'false';
+}
+
+// ToDo を読んで枠を描く。応答が前後しても、最後に要求した結果だけを反映する
+let todaySeq = 0;
+// 更新中は、更新ボタンを「更新中…」にして押せなくする
+function setTodayBusy(on) {
+  const b = $('todayRefresh');
+  b.disabled = on;
+  b.textContent = on ? '更新中…' : '更新';
+  if (on) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+}
+async function loadToday() {
+  const my = ++todaySeq;
+  setTodayBusy(true);
+  if (!todayState.loadedAt) renderToday({ todo: { status: 'loading' }, loadedAt: null, day: '', warn: false }); // 初回だけ「読み込み中」を出す
+  const day = TodayLogic.todayISO(new Date()); // 取得前に決める。見出しも中身もこの日付で描く
+  let next;
+  try {
+    const { data, error } = await sb.from('app_kv').select('value').eq('app_name', 'ToDo').eq('key', 'data-v1').maybeSingle();
+    if (my !== todaySeq) return;
+    if (error) throw new Error('read');
+    const rows = TodayLogic.pickTodo(data ? data.value : null, day);
+    next = { todo: { status: 'ok', rows }, loadedAt: new Date(), day, warn: false };
+  } catch (e) {
+    if (my !== todaySeq) return;
+    if (todayState.todo.status === 'ok') {
+      next = Object.assign({}, todayState, { warn: true }); // 前回の結果は残し、警告だけ添える
+    } else {
+      next = { todo: { status: 'error', message: (e && e.message === '形式が違います' ? '形式が違います' : '読み込めませんでした') + '（ToDo）' }, loadedAt: new Date(), day, warn: false };
+    }
+  }
+  setTodayBusy(false);
+  todayState = next;
+  renderToday(todayState);
+}
+
+$('todayRefresh').onclick = () => loadToday();
+
+// 折りたたみ（開閉は端末ごとに記憶。読み書きできなくても動く）
+const TODAY_COLLAPSE_KEY = 'hub-today-collapsed';
+function setTodayCollapsed(c, save) {
+  $('todayHead').setAttribute('aria-expanded', c ? 'false' : 'true');
+  $('todayBody').hidden = c;
+  $('todayStamp').hidden = c;
+  updateTodaySummary(todayState);
+  if (save) { try { localStorage.setItem(TODAY_COLLAPSE_KEY, c ? '1' : '0'); } catch (e) {} }
+}
+$('todayHead').onclick = () => setTodayCollapsed($('todayHead').getAttribute('aria-expanded') === 'true', true);
+try { if (localStorage.getItem(TODAY_COLLAPSE_KEY) === '1') setTodayCollapsed(true, false); } catch (e) {}
+
+// 画面に戻ったとき、日付が変わっていたか、前回の読み込みから5分以上たっていれば取り直す
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' || $('todayBox').classList.contains('hidden') || !todayState.loadedAt) return;
+  const now = new Date();
+  if (TodayLogic.todayISO(now) !== todayState.day || now - todayState.loadedAt >= 5 * 60 * 1000) loadToday();
+});
 
 $('search').addEventListener('input', (e) => { query = e.target.value; render(); });
 
@@ -803,6 +1032,7 @@ function applySession(session) {
   $('mainView').classList.toggle('hidden', !loggedIn);
   if (channel) { sb.removeChannel(channel); channel = null; }
   closeMenu(false);
+  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = false; $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
   if (loggedIn) {
     userEmail = session.user.email;
     apps = [];
@@ -811,6 +1041,8 @@ function applySession(session) {
     $('search').value = '';
     renderSkeleton();
     loadApps();
+    todayState = { todo: { status: 'loading' }, loadedAt: null, day: '', warn: false };
+    loadToday();
     // 他端末での追加・削除を検知して再読み込み
     channel = sb.channel('apps-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'apps' }, reloadSoon)
