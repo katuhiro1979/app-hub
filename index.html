@@ -720,7 +720,11 @@ function setIconImg(el, src) {
   const img = new Image();
   img.alt = '';
   img.onload = () => { el.textContent = ''; el.style.background = 'transparent'; el.append(img); };
-  img.src = src;
+  // 画像を作り直したときに古い画像が残らないよう、最新かどうかを確認してから表示する（失敗したら普通に読む）
+  fetch(src, { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.blob() : Promise.reject()))
+    .then((b) => { img.src = URL.createObjectURL(b); })
+    .catch(() => { img.src = src; });
 }
 
 async function findIcon(pageUrl) {
