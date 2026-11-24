@@ -143,6 +143,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 12px; flex: none;
     font-size: 21px; font-weight: 800; color: #fff;
   }
+  .icon img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; display: block; }
   .text { min-width: 0; }
   .name { font-weight: 700; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; padding-right: 36px; }
   .desc {
@@ -632,6 +633,8 @@ function render() {
     icon.className = 'icon';
     icon.style.background = iconColor(a.name, a.color);
     icon.textContent = Array.from(a.name)[0] || '?';
+    // そのアプリ自身のアイコン画像があれば使う（なければ、頭文字＋色）
+    if (isLink && appIcons[a.url]) setIconImg(icon, appIcons[a.url]);
     const text = document.createElement('div');
     text.className = 'text';
     const name = document.createElement('div');
@@ -704,6 +707,49 @@ function render() {
   addBtn.onclick = () => openDialog(null);
   addLi.append(addBtn);
   ul.append(addLi);
+  discoverIcons();
+}
+
+// ---- 各アプリのアイコン画像（アプリのページの <link rel="icon"> から自動で取得）----
+// 取得に成功した分だけ、この端末に覚えておく。見つからないアプリは、これまでの「頭文字＋色」のまま
+let appIcons = {};
+try { appIcons = JSON.parse(localStorage.getItem('hub-app-icons')) || {}; } catch (e) {}
+const iconTried = new Set();
+
+function setIconImg(el, src) {
+  const img = new Image();
+  img.alt = '';
+  img.onload = () => { el.textContent = ''; el.style.background = 'transparent'; el.append(img); };
+  img.src = src;
+}
+
+async function findIcon(pageUrl) {
+  try {
+    const res = await fetch(pageUrl);
+    if (!res.ok) return '';
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    const link = doc.querySelector('link[rel~="apple-touch-icon"]') || doc.querySelector('link[rel~="icon"]');
+    const href = link && link.getAttribute('href');
+    if (!href) return '';
+    const u = new URL(href, pageUrl);
+    return /^https?:$/.test(u.protocol) ? u.href : '';
+  } catch (e) { return ''; }
+}
+
+function discoverIcons() {
+  apps.forEach((a) => {
+    if (!/^https?:\/\//i.test(a.url || '') || appIcons[a.url] || iconTried.has(a.url)) return;
+    iconTried.add(a.url);
+    findIcon(a.url).then((src) => {
+      if (!src) return;
+      appIcons[a.url] = src;
+      try { localStorage.setItem('hub-app-icons', JSON.stringify(appIcons)); } catch (e) {}
+      document.querySelectorAll('#appList li.card').forEach((li) => {
+        const x = apps.find((y) => y.id === li.dataset.id);
+        if (x && x.url === a.url) setIconImg(li.querySelector('.icon'), src);
+      });
+    });
+  });
 }
 
 // アプリ一覧を再取得して描画
