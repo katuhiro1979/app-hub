@@ -251,6 +251,10 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   }
   .more:hover, .more[aria-expanded="true"] { background: var(--surface-2); color: var(--text); }
   .top .more { position: static; transform: none; }
+  .hbtns { display: flex; align-items: center; gap: 8px; flex: none; }
+  #fontBtn { min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font: inherit; font-size: .875rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  #fontBtn:hover { background: var(--surface-2); color: var(--text); }
+  #fontBtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
   .swatch {
     appearance: none; width: 36px; height: 36px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; padding: 0;
@@ -452,7 +456,10 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
         </div>
         <h1>アプリ管理</h1>
       </div>
-      <button id="userMenuBtn" class="more" type="button" aria-label="メニュー" aria-haspopup="menu" aria-expanded="false"></button>
+      <div class="hbtns">
+        <button id="fontBtn" type="button" aria-label="文字サイズの切り替え"></button>
+        <button id="userMenuBtn" class="more" type="button" aria-label="メニュー" aria-haspopup="menu" aria-expanded="false"></button>
+      </div>
     </header>
 
     <div class="today-row">
@@ -601,7 +608,16 @@ function setFs(z) {
   if (z === 'm') document.documentElement.removeAttribute('data-fs');
   else document.documentElement.dataset.fs = z;
   try { localStorage.setItem('hub-fontsize', z); } catch (e) {} // 保存できなくても表示は切り替える
+  updateFsBtn();
 }
+function updateFsBtn() {
+  const b = $('fontBtn'); if (!b) return;
+  const z = getFs();
+  b.textContent = '文字 ' + FS_LABEL[z];
+  b.setAttribute('aria-label', '文字サイズの切り替え（現在: ' + FS_LABEL[z] + '。押すと' + FS_LABEL[FS_NEXT[z]] + '）');
+}
+$('fontBtn').onclick = () => setFs(FS_NEXT[getFs()]);
+updateFsBtn();
 
 // ---- 「⋯」メニュー（画面に1つだけ）----
 let menuEl = null;
@@ -675,7 +691,6 @@ $('userMenuBtn').onclick = () => {
   const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
   openMenu($('userMenuBtn'), [
     { label: `テーマ：${THEME_LABEL[cur]}（タップで${THEME_LABEL[next]}へ）`, run: () => setTheme(next) },
-    { label: `文字サイズ：${FS_LABEL[getFs()]}（タップで${FS_LABEL[FS_NEXT[getFs()]]}へ）`, run: () => setFs(FS_NEXT[getFs()]) },
     { label: 'ログアウト', run: () => sb.auth.signOut() },
   ], userEmail);
 };
