@@ -1123,7 +1123,9 @@ function renderToday(state) {
         let el;
         if (href) {
           el = document.createElement('a');
-          el.href = href; el.target = '_blank'; el.rel = 'noopener noreferrer';
+          // 項目IDを付けて、ToDo側でその項目まで飛べるようにする（ToDo側が未対応でも、普通にToDoが開くだけ）
+          el.href = r.id ? href.split('#')[0] + '#item=' + encodeURIComponent(r.id) : href;
+          el.target = '_blank'; el.rel = 'noopener noreferrer';
         } else {
           el = document.createElement('span');
           el.className = 't';
