@@ -92,7 +92,38 @@
     return out;
   }
 
-  const api = { isDate, todayISO, formatHeading, pickTodo };
+  // 翌日（YYYY-MM-DD）
+  function nextDayISO(iso) {
+    const d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // 出勤簿（新）の保存データ { records: { 'YYYY-MM-DD': {kind,type,clockIn,clockOut,plan,...} }, ... } から、今日と明日の勤務を取り出す
+  const KIND_LABEL = { work: '勤務', off: '休日', legal: '法定休日', leave: '有給' };
+  function shiftOf(r) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+    const label = Object.prototype.hasOwnProperty.call(KIND_LABEL, r.kind) ? KIND_LABEL[r.kind] : '';
+    const type = typeof r.type === 'string' ? r.type.trim() : '';
+    const clockIn = isTime(r.clockIn) ? r.clockIn : '';
+    const clockOut = isTime(r.clockOut) ? r.clockOut : '';
+    const plan = typeof r.plan === 'string' ? r.plan.trim() : '';
+    if (!type && !clockIn && !clockOut && !plan) return null; // 空の記録は「記録なし」
+    if (!label && !type) return null;
+    return { name: type || label, label, clockIn, clockOut, overnight: !!clockIn && !!clockOut && clockOut < clockIn, plan };
+  }
+  function pickShift(value, today) {
+    const none = { today: null, tomorrow: null };
+    if (value == null) return none;
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (e) { throw new Error('形式が違います'); }
+      if (value == null) return none;
+    }
+    if (typeof value !== 'object' || !value.records || typeof value.records !== 'object' || Array.isArray(value.records)) throw new Error('形式が違います');
+    return { today: shiftOf(value.records[today]), tomorrow: shiftOf(value.records[nextDayISO(today)]) };
+  }
+
+  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift };
   root.TodayLogic = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
