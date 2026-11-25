@@ -198,6 +198,26 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   #todayBox { order: 2; }
   #sojiBox { order: 3; }
   .today-side:not(:has(.today:not(.hidden))) { display: none; }
+  /* 「今日」のカードの並べ替え・表示（保存があるときだけ .custom。ないときは従来の並び） */
+  .today-tools { display: flex; justify-content: flex-end; margin: -8px 0 6px; }
+  .btn-ghost { min-height: 44px; padding: 0 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; border-radius: 10px; }
+  .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+  .btn-ghost:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .today.user-hidden { display: none; }
+  .today-row.custom .today-side { display: contents; }
+  .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox { order: var(--rank, 0); }
+  @media (min-width: 900px) {
+    .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox { order: 0; grid-column: var(--col, 1); grid-row: var(--row, 1) / span var(--span, 1); }
+    .today-row.custom[data-n="0"], .today-row.custom[data-n="1"] { grid-template-columns: minmax(0, 1fr); }
+  }
+  .layout-note { margin: 0 0 12px; font-size: 0.8125rem; color: var(--muted); }
+  .layout-list { list-style: none; margin: 0 0 12px; padding: 0; }
+  .layout-list li { display: flex; align-items: center; gap: 8px; min-height: 52px; border-top: 1px solid var(--border); }
+  .layout-list .nm { flex: 1; min-width: 0; font-weight: 600; }
+  .layout-list .mv { flex: none; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 1rem; cursor: pointer; }
+  .layout-list .mv:disabled { opacity: .35; cursor: default; }
+  .layout-list label.show { flex: none; display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 4px; min-height: 44px; font-size: 0.875rem; font-weight: 600; color: var(--text); cursor: pointer; }
+  .layout-list input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
   .soji-lbl { margin: 8px 0 2px; font-size: 0.75rem; font-weight: 700; color: var(--muted); }
   .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 0.875rem; min-height: 36px; }
   .soji-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
@@ -463,6 +483,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       </div>
     </header>
 
+    <div class="today-tools"><button id="layoutBtn" class="btn-ghost" type="button">カードの並べ替え・表示</button></div>
     <div class="today-row">
     <!-- 出勤簿（新）の今日・明日の勤務。ToDo の枠とは別のカード（読み取り専用） -->
     <div class="today-side">
@@ -520,6 +541,18 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     </div>
   </main>
 </div>
+
+<!-- 「今日」のカードの並べ替え・表示ダイアログ -->
+<dialog id="layoutDialog" aria-labelledby="layoutTitle">
+  <h3 id="layoutTitle">カードの並べ替え・表示</h3>
+  <p class="layout-note">上のカードから順に並びます。PC幅では、一番上のカードが左の広い欄になります。この端末だけの設定です。</p>
+  <ul id="layoutList" class="layout-list"></ul>
+  <p id="layoutNone" class="dlg-err hidden" role="status">すべてのカードを非表示にしています。</p>
+  <div class="row">
+    <button type="button" id="layoutReset" class="btn">初期の並びに戻す</button>
+    <button type="button" id="layoutClose" class="btn primary">閉じる</button>
+  </div>
+</dialog>
 
 <!-- アプリ追加・編集ダイアログ -->
 <dialog id="addDialog" aria-labelledby="dialogTitle">
@@ -619,6 +652,89 @@ function updateFsBtn() {
 }
 $('fontBtn').onclick = () => setFs(FS_NEXT[getFs()]);
 updateFsBtn();
+
+// ---- 「今日」のカードの並べ替え・表示（この端末だけの設定）----
+const CARD_KEYS = ['shift', 'todo', 'soji'];
+const CARD_ID = { shift: 'shiftBox', todo: 'todayBox', soji: 'sojiBox' };
+const CARD_NAME = { shift: '出勤簿', todo: 'ToDo（今日）', soji: '掃除' };
+const CARD_LS = 'hub-card-layout';
+function loadCardLayout() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CARD_LS));
+    if (v && Array.isArray(v.order) && v.order.length === CARD_KEYS.length && CARD_KEYS.every((k) => v.order.includes(k))
+        && Array.isArray(v.hidden) && v.hidden.every((k) => CARD_KEYS.includes(k))) return { order: v.order.slice(), hidden: [...new Set(v.hidden)] };
+  } catch (e) {}
+  return null;
+}
+let cardLayout = loadCardLayout();
+function saveCardLayout() {
+  try { if (cardLayout) localStorage.setItem(CARD_LS, JSON.stringify(cardLayout)); else localStorage.removeItem(CARD_LS); } catch (e) {} // 保存できなくても表示は変える
+}
+const defaultCardOrder = () => (window.matchMedia('(min-width: 900px)').matches ? ['todo', 'shift', 'soji'] : ['shift', 'todo', 'soji']);
+function applyCardLayout() {
+  const row = document.querySelector('.today-row');
+  CARD_KEYS.forEach((k) => { const el = $(CARD_ID[k]); el.classList.remove('user-hidden'); ['--rank', '--col', '--row', '--span'].forEach((v) => el.style.removeProperty(v)); });
+  row.classList.toggle('custom', !!cardLayout);
+  if (!cardLayout) { row.removeAttribute('data-n'); return; }
+  cardLayout.hidden.forEach((k) => $(CARD_ID[k]).classList.add('user-hidden'));
+  // データがなくて出ていないカード(.hidden)は数えない。残りを、上から順に並べる
+  const vis = cardLayout.order.filter((k) => !cardLayout.hidden.includes(k) && !$(CARD_ID[k]).classList.contains('hidden'));
+  vis.forEach((k, i) => {
+    const el = $(CARD_ID[k]);
+    el.style.setProperty('--rank', i + 1);
+    if (i === 0) { el.style.setProperty('--col', 1); el.style.setProperty('--row', 1); el.style.setProperty('--span', Math.max(1, vis.length - 1)); }
+    else { el.style.setProperty('--col', 2); el.style.setProperty('--row', i); el.style.setProperty('--span', 1); }
+  });
+  row.dataset.n = vis.length;
+}
+// 出勤簿・掃除・ToDo は、読み込み後にデータの有無で出たり消えたりする。変わったときだけ並べ直す
+let cardSig = '';
+const cardObs = new MutationObserver(() => {
+  const sig = CARD_KEYS.map((k) => ($(CARD_ID[k]).classList.contains('hidden') ? 0 : 1)).join('');
+  if (sig !== cardSig) { cardSig = sig; applyCardLayout(); }
+});
+CARD_KEYS.forEach((k) => cardObs.observe($(CARD_ID[k]), { attributes: true, attributeFilter: ['class'] }));
+function renderLayoutDialog() {
+  const order = cardLayout ? cardLayout.order : defaultCardOrder();
+  const hidden = cardLayout ? cardLayout.hidden : [];
+  const ul = $('layoutList'); ul.replaceChildren();
+  order.forEach((k, i) => {
+    const li = document.createElement('li');
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = CARD_NAME[k];
+    const mk = (txt, label, dis, d) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'mv'; b.textContent = txt;
+      b.setAttribute('aria-label', CARD_NAME[k] + 'を' + label); b.disabled = dis;
+      b.onclick = () => moveCard(k, d); return b;
+    };
+    const lb = document.createElement('label'); lb.className = 'show';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !hidden.includes(k);
+    cb.onchange = () => toggleCard(k, cb.checked);
+    lb.append(cb, '表示');
+    li.append(nm, mk('↑', '上へ', i === 0, -1), mk('↓', '下へ', i === order.length - 1, 1), lb);
+    ul.append(li);
+  });
+  $('layoutNone').classList.toggle('hidden', hidden.length < CARD_KEYS.length);
+}
+function ensureCardLayout() { if (!cardLayout) cardLayout = { order: defaultCardOrder(), hidden: [] }; }
+function moveCard(k, d) {
+  ensureCardLayout();
+  const o = cardLayout.order, i = o.indexOf(k), j = i + d;
+  if (j < 0 || j >= o.length) return;
+  [o[i], o[j]] = [o[j], o[i]];
+  saveCardLayout(); applyCardLayout(); renderLayoutDialog();
+}
+function toggleCard(k, show) {
+  ensureCardLayout();
+  const h = cardLayout.hidden.filter((x) => x !== k);
+  if (!show) h.push(k);
+  cardLayout.hidden = h;
+  saveCardLayout(); applyCardLayout(); renderLayoutDialog();
+}
+$('layoutBtn').onclick = () => { renderLayoutDialog(); $('layoutDialog').showModal(); };
+$('layoutClose').onclick = () => $('layoutDialog').close();
+$('layoutReset').onclick = () => { cardLayout = null; saveCardLayout(); applyCardLayout(); renderLayoutDialog(); };
+$('layoutDialog').addEventListener('click', (e) => { if (e.target === $('layoutDialog')) $('layoutDialog').close(); });
+applyCardLayout();
 
 // ---- 「⋯」メニュー（画面に1つだけ）----
 let menuEl = null;
