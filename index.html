@@ -732,6 +732,13 @@ $('fsPanel').addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('fsPanel').hidden) { e.stopPropagation(); fsPanelOpen(false, true); } }, true);
 document.addEventListener('click', (e) => { if (!$('fsPanel').hidden && !e.target.closest('.fswrap')) fsPanelOpen(false, false); });
 updateFsBtn();
+// ホーム画面のアプリ(iPad など)で画面を回したとき、画面の幅が更新されず縦用の並びのままになることがある。向きが変わったら viewport を入れ直して、幅を測り直させる
+(() => {
+  const m = document.querySelector('meta[name="viewport"]'); if (!m) return;
+  const base = m.getAttribute('content');
+  const redo = () => { m.setAttribute('content', 'width=device-width, initial-scale=1.0001, viewport-fit=cover'); requestAnimationFrame(() => m.setAttribute('content', base)); };
+  window.addEventListener('orientationchange', () => setTimeout(redo, 300));
+})();
 
 // ---- 「今日」のカードの並べ替え・表示（この端末だけの設定）----
 const CARD_KEYS = ['shift', 'todo', 'soji', 'backup'];
