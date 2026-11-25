@@ -123,7 +123,38 @@
     return { today: shiftOf(value.records[today]), tomorrow: shiftOf(value.records[nextDayISO(today)]) };
   }
 
-  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift };
+  // 掃除タスクマネージャーの保存データ { tasks: [{member,color,title,next,...}] } から、今日が期限・期限切れ・明日が期限を取り出す
+  const dayNum = (iso) => Date.parse(iso + 'T00:00:00Z') / 86400000;
+  function pickSoji(value, today) {
+    const out = { today: [], overdue: [], tomorrow: [] };
+    if (value == null) return out;
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (e) { throw new Error('形式が違います'); }
+      if (value == null) return out;
+    }
+    if (typeof value !== 'object' || !Array.isArray(value.tasks)) throw new Error('形式が違います');
+    const tmr = nextDayISO(today);
+    value.tasks.forEach((t) => {
+      if (!t || typeof t !== 'object' || Array.isArray(t) || !isDate(t.next)) return;
+      const title = typeof t.title === 'string' ? t.title.trim() : '';
+      if (!title) return;
+      const row = {
+        id: String(t.id == null ? '' : t.id),
+        member: typeof t.member === 'string' ? t.member.trim() : '',
+        title,
+        color: typeof t.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '',
+        next: t.next,
+        days: Math.max(0, Math.round(dayNum(today) - dayNum(t.next)))
+      };
+      if (t.next === today) out.today.push(row);
+      else if (t.next < today) out.overdue.push(row);
+      else if (t.next === tmr) out.tomorrow.push(row);
+    });
+    out.overdue.sort((a, b) => b.days - a.days); // 古い順（過ぎた日数が多い順）
+    return out;
+  }
+
+  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji };
   root.TodayLogic = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
