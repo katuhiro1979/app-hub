@@ -127,8 +127,15 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   /* ---- 今日の枠（読み取り専用） ---- */
   .today { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px 14px 10px; margin: 0 0 22px; }
   .today-bar { display: flex; align-items: center; gap: 8px; }
-  .today-head { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+  .today-head { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
   .today-head:focus-visible, .today a:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; border-radius: 6px; }
+  .today-refresh { flex: none; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; }
+  .today-refresh:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); }
+  .today-refresh:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 0; }
+  .today-refresh:disabled { cursor: default; }
+  .today-refresh[aria-busy="true"] svg { animation: today-spin .9s linear infinite; }
+  @keyframes today-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .today-refresh[aria-busy="true"] svg { animation: none; } }
   .today-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
   .today-date { font-size: 17px; font-weight: 700; }
   .today-chev { margin-left: auto; color: var(--muted); transition: transform .15s; }
@@ -182,6 +189,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; min-height: 36px; }
   .soji-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .soji-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .soji-days.strong { background: var(--danger); color: #fff; }
   .soji-days { flex: none; font-size: 12px; font-weight: 700; padding: 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); font-variant-numeric: tabular-nums; }
   .soji-none { margin: 2px 0 4px; font-size: 14px; color: var(--muted); }
   .soji-next { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
@@ -468,7 +476,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
           <span class="today-title">今日</span><span id="todayDate" class="today-date"></span><span id="todaySummary" class="today-summary" hidden></span>
           <svg class="today-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <button id="todayRefresh" class="btn" type="button">更新</button>
+        <button id="todayRefresh" class="today-refresh" type="button" aria-label="更新" title="更新"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button>
       </div>
       <div id="todayBody" aria-live="polite"></div>
       <p id="todayStamp" class="today-stamp"></p>
@@ -1200,7 +1208,8 @@ let todaySeq = 0;
 function setTodayBusy(on) {
   const b = $('todayRefresh');
   b.disabled = on;
-  b.textContent = on ? '更新中…' : '更新';
+  const label = on ? '更新中…' : '更新';
+  b.setAttribute('aria-label', label); b.title = label;
   if (on) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
 }
 async function loadToday() {
@@ -1219,7 +1228,7 @@ async function loadToday() {
     next = { todo: { status: 'ok', rows }, loadedAt: new Date(), day, warn: false };
   } catch (e) {
     if (my !== todaySeq) return;
-    if (todayState.todo.status === 'ok') {
+    if (todayState.todo.status === 'ok' && todayState.day === day) {
       next = Object.assign({}, todayState, { warn: true }); // 前回の結果は残し、警告だけ添える
     } else {
       next = { todo: { status: 'error', message: (e && e.message === '形式が違います' ? '形式が違います' : '読み込めませんでした') + '（ToDo）' }, loadedAt: new Date(), day, warn: false };
@@ -1289,10 +1298,10 @@ async function loadShift() {
     const { data, error } = await sb.from('app_kv').select('value').eq('app_name', '出勤簿2').eq('key', 'data-v1').maybeSingle();
     if (my !== shiftSeq) return;
     if (error) throw new Error('read');
-    next = { status: 'ok', data: TodayLogic.pickShift(data ? data.value : null, day), loadedAt: new Date(), warn: false };
+    next = { status: 'ok', data: TodayLogic.pickShift(data ? data.value : null, day), loadedAt: new Date(), day, warn: false };
   } catch (e) {
     if (my !== shiftSeq) return;
-    if (shiftState.status === 'ok') next = Object.assign({}, shiftState, { warn: true }); // 前回の結果は残し、警告だけ添える
+    if (shiftState.status === 'ok' && shiftState.day === day) next = Object.assign({}, shiftState, { warn: true }); // 同じ日なら前回の結果は残し、警告だけ添える（日が変わっていたら昨日を出さない）
     else next = { status: 'error', message: (e && e.message === '形式が違います' ? '形式が違います' : '読み込めませんでした') + '（出勤簿）', loadedAt: new Date(), warn: false };
   }
   shiftState = next;
@@ -1315,6 +1324,7 @@ let sojiSeq = 0;
 const sojiLabel = (r) => (r.member && r.member !== r.title ? r.member + '：' : '') + r.title; // 部屋名と題名が同じなら片方だけ
 let sojiAll = false; // 期限切れを全件出すか
 const SOJI_LIMIT = 5;
+const SOJI_STRONG_DAYS = 30; // これ以上過ぎていたら強い赤
 function renderSoji() {
   const box = $('sojiBox'), body = $('sojiBody'), s = sojiState, sum = $('sojiSummary');
   body.replaceChildren();
@@ -1340,7 +1350,7 @@ function renderSoji() {
       const dot = el('span', 'soji-dot');
       if (r.color) dot.style.background = r.color;
       d.append(dot, el('span', 'soji-t', sojiLabel(r)));
-      if (days) d.append(el('span', 'soji-days', r.days + '日'));
+      if (days) d.append(el('span', 'soji-days' + (r.days >= SOJI_STRONG_DAYS ? ' strong' : ''), r.days + '日超過'));
       return d;
     };
     const secT = el('div', 'soji-today');
@@ -1377,10 +1387,10 @@ async function loadSoji() {
     const { data, error } = await sb.from('app_kv').select('value').eq('app_name', '掃除タスクマネージャー').eq('key', 'data-v1').maybeSingle();
     if (my !== sojiSeq) return;
     if (error) throw new Error('read');
-    next = { status: 'ok', data: TodayLogic.pickSoji(data ? data.value : null, day), loadedAt: new Date(), warn: false };
+    next = { status: 'ok', data: TodayLogic.pickSoji(data ? data.value : null, day), loadedAt: new Date(), day, warn: false };
   } catch (e) {
     if (my !== sojiSeq) return;
-    if (sojiState.status === 'ok') next = Object.assign({}, sojiState, { warn: true });
+    if (sojiState.status === 'ok' && sojiState.day === day) next = Object.assign({}, sojiState, { warn: true });
     else next = { status: 'error', message: (e && e.message === '形式が違います' ? '形式が違います' : '読み込めませんでした') + '（掃除）', loadedAt: new Date(), warn: false };
   }
   sojiState = next;
@@ -1414,6 +1424,12 @@ document.addEventListener('visibilitychange', () => {
   const now = new Date();
   if (TodayLogic.todayISO(now) !== todayState.day || now - todayState.loadedAt >= 5 * 60 * 1000) loadToday();
 });
+
+// 画面を開いたまま0時を越えたときも、日付が変わっていたら取り直す（タブを切り替えなくてよい）
+setInterval(() => {
+  if (document.visibilityState === 'hidden' || $('todayBox').classList.contains('hidden') || !todayState.loadedAt) return;
+  if (TodayLogic.todayISO(new Date()) !== todayState.day) loadToday();
+}, window.__dayCheckMs || 30000); // __dayCheckMs はテスト用（通常は30秒ごと）
 
 $('search').addEventListener('input', (e) => { query = e.target.value; render(); });
 
