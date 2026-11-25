@@ -28,6 +28,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     --accent: #4f46e5;
     --accent-text: #ffffff;
     --danger: #d1264a;
+    --on-danger: #fff;
     --shadow: 0 1px 2px rgba(20, 22, 28, .05);
     --shadow-pop: 0 10px 30px rgba(20, 22, 28, .2);
     --radius: 16px;
@@ -42,7 +43,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       --muted: #9aa3b5;
       --accent: #8b93ff;
       --accent-text: #10121a;
-      --danger: #ff7a93;
+      --danger: #ff7a93; --on-danger: #1a0a10;
       --shadow: 0 1px 2px rgba(0, 0, 0, .35);
       --shadow-pop: 0 10px 30px rgba(0, 0, 0, .5);
     }
@@ -56,7 +57,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     --muted: #9aa3b5;
     --accent: #8b93ff;
     --accent-text: #10121a;
-    --danger: #ff7a93;
+    --danger: #ff7a93; --on-danger: #1a0a10;
     --shadow: 0 1px 2px rgba(0, 0, 0, .35);
     --shadow-pop: 0 10px 30px rgba(0, 0, 0, .5);
   }
@@ -173,6 +174,8 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .today-tag { flex: none; font-weight: 600; font-size: 0.75rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
   .today-sec .btn { margin: 6px 0 2px; min-height: 44px; padding: 4px 16px; font-size: 0.875rem; }
   .today-summary:not([hidden]) { font-size: 0.8125rem; color: var(--muted); font-weight: 600; }
+  .today-summary.warn:not([hidden]) { color: var(--danger); font-weight: 700; }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .today-msg { margin: 8px 0; font-size: 0.875rem; color: var(--muted); }
   .today-msg.err { color: var(--danger); font-weight: 600; }
   .today-stamp { margin: 6px 0 0; font-size: 0.75rem; color: var(--muted); }
@@ -189,7 +192,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   a.shift-link { color: inherit; text-decoration: none; }
   a.shift-link:hover { text-decoration: underline; }
   .shift-plan { margin: 10px 0 0; font-size: 0.875rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .shift-next { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .shift-next { min-height: 44px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .shift-next b { font-size: 1rem; color: var(--text); }
   /* 右の列（出勤簿・掃除）。どちらも出ないときは列ごと消す */
   /* スマホ幅: 右の列の枠は外し、出勤簿 → ToDo → 掃除 の順に縦に並べる。PC幅は右の列にまとめる */
@@ -231,12 +234,12 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .bk-main { margin: 6px 0 2px; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
   .bk-main.strong { color: var(--danger); }
   .bk-sub { margin: 0 0 6px; font-size: 0.8125rem; color: var(--muted); }
-  .bk-link { display: inline-block; margin-top: 4px; font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
+  .bk-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 0; font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
   .soji-lbl { margin: 8px 0 2px; font-size: 0.75rem; font-weight: 700; color: var(--muted); }
-  .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 0.875rem; min-height: 36px; }
+  .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 0.875rem; min-height: 44px; }
   .soji-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .soji-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .soji-days.strong { background: var(--danger); color: #fff; }
+  .soji-days.strong { background: var(--danger); color: var(--on-danger); }
   .soji-days { flex: none; font-size: 0.75rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); font-variant-numeric: tabular-nums; }
   .soji-none { margin: 2px 0 4px; font-size: 0.875rem; color: var(--muted); }
   .soji-next { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
@@ -355,7 +358,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     border-radius: 14px; font-size: 0.875rem; font-weight: 600;
     background: var(--text); color: var(--bg); box-shadow: var(--shadow-pop); animation: toast-in .25s ease both;
   }
-  .toast.error { background: var(--danger); color: #fff; }
+  .toast.error { background: var(--danger); color: var(--on-danger); }
   .toast-act {
     appearance: none; min-height: 36px; padding: 0 10px; border: 1px solid currentColor; border-radius: 10px;
     background: none; color: inherit; font-weight: 700; cursor: pointer; flex: none;
@@ -574,6 +577,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   <p class="layout-note">上のカードから順に並びます。PC幅では、一番上のカードが左の広い欄になります。「横いっぱい」にしたカードは、PC幅で1段まるごと使います(スマホは常に1列)。この端末だけの設定です。</p>
   <ul id="layoutList" class="layout-list"></ul>
   <p id="layoutNone" class="dlg-err hidden" role="status">すべてのカードを非表示にしています。</p>
+  <p id="layoutStatus" class="sr-only" role="status"></p>
   <div class="row">
     <button type="button" id="layoutReset" class="btn">初期の並びに戻す</button>
     <button type="button" id="layoutClose" class="btn primary">閉じる</button>
@@ -729,23 +733,27 @@ CARD_KEYS.forEach((k) => cardObs.observe($(CARD_ID[k]), { attributes: true, attr
 function renderLayoutDialog() {
   const order = cardLayout ? cardLayout.order : defaultCardOrder();
   const hidden = cardLayout ? cardLayout.hidden : [];
-  const ul = $('layoutList'); ul.replaceChildren();
+  const ul = $('layoutList');
+  // 作り直したあとも、押していた部品にフォーカスを戻す（キーボードで続けて操作できるように）
+  const ae = document.activeElement, fli = ae && ae.closest ? ae.closest('#layoutList li') : null;
+  const keep = fli && ul.contains(ae) ? { k: fli.dataset.k, role: ae.dataset.role } : null;
+  ul.replaceChildren();
   order.forEach((k, i) => {
     const li = document.createElement('li');
     const nm = document.createElement('div'); nm.className = 'nm';
     const nt = document.createElement('span'); nt.textContent = CARD_NAME[k];
-    const sel = document.createElement('select'); sel.className = 'wsel'; sel.setAttribute('aria-label', CARD_NAME[k] + 'の幅（PC幅のとき）');
+    const sel = document.createElement('select'); sel.className = 'wsel'; sel.dataset.role = 'wide'; sel.setAttribute('aria-label', CARD_NAME[k] + 'の幅（PC幅のとき）');
     [['', '幅：標準'], ['w', '幅：横いっぱい']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.append(o); });
     sel.value = cardLayout && (cardLayout.wide || []).includes(k) ? 'w' : '';
     sel.onchange = () => setWide(k, sel.value === 'w');
     nm.append(nt, sel);
     const mk = (txt, label, dis, d) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'mv'; b.textContent = txt;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'mv'; b.dataset.role = d < 0 ? 'up' : 'down'; b.textContent = txt;
       b.setAttribute('aria-label', CARD_NAME[k] + 'を' + label); b.disabled = dis;
       b.onclick = () => moveCard(k, d); return b;
     };
     const lb = document.createElement('label'); lb.className = 'show';
-    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !hidden.includes(k);
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.dataset.role = 'show'; cb.setAttribute('aria-label', CARD_NAME[k] + 'を表示'); cb.checked = !hidden.includes(k);
     cb.onchange = () => toggleCard(k, cb.checked);
     lb.append(cb, '表示');
     const gp = document.createElement('span'); gp.className = 'lgrip'; gp.textContent = '⋮⋮'; gp.setAttribute('aria-hidden', 'true'); gp.title = 'ドラッグして並べ替え';
@@ -754,8 +762,15 @@ function renderLayoutDialog() {
     li.append(gp, nm, mk('↑', '上へ', i === 0, -1), mk('↓', '下へ', i === order.length - 1, 1), lb);
     ul.append(li);
   });
+  if (keep) {
+    const li = [...ul.children].find((x) => x.dataset.k === keep.k);
+    const pick = (role) => li && li.querySelector('[data-role="' + role + '"]:not(:disabled)');
+    const t = pick(keep.role) || pick(keep.role === 'up' ? 'down' : keep.role === 'down' ? 'up' : 'show');
+    if (t) t.focus();
+  }
   $('layoutNone').classList.toggle('hidden', hidden.length < CARD_KEYS.length);
 }
+function sayLayout(t) { const e = $('layoutStatus'); if (e) { e.textContent = ''; setTimeout(() => { e.textContent = t; }, 30); } }
 function ensureCardLayout() { if (!cardLayout) cardLayout = { order: defaultCardOrder(), hidden: [], wide: [] }; }
 function moveCard(k, d) {
   ensureCardLayout();
@@ -763,6 +778,7 @@ function moveCard(k, d) {
   if (j < 0 || j >= o.length) return;
   [o[i], o[j]] = [o[j], o[i]];
   saveCardLayout(); applyCardLayout(); renderLayoutDialog();
+  sayLayout(CARD_NAME[k] + 'を' + (j + 1) + '番目に移動しました');
 }
 // つかんで動かす並べ替え(マウス・タッチ共通)。動かしている間は表示だけ動かし、離したときに確定する
 function startCardDrag(e, li, k) {
@@ -794,6 +810,7 @@ function startCardDrag(e, li, k) {
       ensureCardLayout();
       const o = cardLayout.order; o.splice(to, 0, o.splice(from, 1)[0]);
       saveCardLayout(); applyCardLayout();
+      sayLayout(CARD_NAME[k] + 'を' + (to + 1) + '番目に移動しました');
     }
     renderLayoutDialog();
   };
@@ -804,6 +821,7 @@ function setWide(k, on) {
   cardLayout.wide = (cardLayout.wide || []).filter((x) => x !== k);
   if (on) cardLayout.wide.push(k);
   saveCardLayout(); applyCardLayout(); renderLayoutDialog();
+  sayLayout(CARD_NAME[k] + 'の幅を' + (on ? '横いっぱい' : '標準') + 'にしました');
 }
 function toggleCard(k, show) {
   ensureCardLayout();
@@ -811,6 +829,7 @@ function toggleCard(k, show) {
   if (!show) h.push(k);
   cardLayout.hidden = h;
   saveCardLayout(); applyCardLayout(); renderLayoutDialog();
+  sayLayout(CARD_NAME[k] + 'を' + (show ? '表示' : '非表示') + 'にしました');
 }
 $('layoutBtn').onclick = () => { renderLayoutDialog(); $('layoutDialog').showModal(); };
 $('layoutClose').onclick = () => $('layoutDialog').close();
@@ -1328,7 +1347,7 @@ function renderToday(state) {
     body.append(msg('今日の予定はありません'));
   } else {
     if (state.warn) body.append(todayWarnEl(state));
-    const todoApp = apps.find((a) => a.name === 'ToDo');
+    const todoApp = apps.find((a) => /(^|\/)todo\.html(\?|#|$)/.test(a.url || '')) || apps.find((a) => a.name === 'ToDo');
     const href = todoApp && /^https?:\/\//i.test(todoApp.url || '') ? todoApp.url : '';
     const section = (kind, title, allRows, withDate) => {
       if (!allRows.length) return;
@@ -1674,7 +1693,7 @@ function backupDays(at, now) {
 }
 function renderBackup() {
   const box = $('backupBox'), body = $('backupBody'), s = backupState, sum = $('backupSummary');
-  body.replaceChildren(); sum.hidden = true;
+  body.replaceChildren(); sum.hidden = true; sum.classList.remove('warn');
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   if (s.status === 'loading') { box.classList.add('hidden'); return; }
   if (s.status === 'error') {
@@ -1692,9 +1711,11 @@ function renderBackup() {
       const label = days === 0 ? '今日' : days + '日前';
       const d = new Date(v.at), pad = (n) => String(n).padStart(2, '0');
       body.append(el('p', 'bk-main' + (strong ? ' strong' : ''), '最後のバックアップ：' + label));
-      body.append(el('p', 'bk-sub', d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + (v.kind ? '（' + v.kind + '）' : '') + (v.ng ? '　失敗 ' + v.ng + ' 件あり' : '')));
+      body.append(el('p', 'bk-sub', d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + (v.kind ? '（' + v.kind + '）' : '')));
       if (strong) body.append(el('p', 'today-msg err', BACKUP_WARN_DAYS + '日以上バックアップしていません'));
-      sum.textContent = label; sum.hidden = false;
+      if (v.ng > 0) body.append(el('p', 'today-msg err', '失敗 ' + v.ng + ' 件あり。バックアップ管理で確認してください'));
+      const warn = strong || v.ng > 0; // 注意が要るときは、折りたたんでも見出しに赤く出す
+      sum.textContent = (warn ? '⚠ ' : '') + label + (v.ng > 0 ? '・失敗あり' : ''); sum.classList.toggle('warn', warn); sum.hidden = false;
     }
     const app = apps.find((a) => /(^|\/)backup-manager\.html(\?|#|$)/.test(a.url || ''));
     if (app && /^https?:\/\//i.test(app.url)) {
