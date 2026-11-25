@@ -28,7 +28,7 @@
   // ToDo の保存データ { items, statuses, groups } から、今日の分と期限切れを取り出す
   // ToDo 本体（todo.html の isOverdue・繰り越し処理）と同じ判定にそろえる
   function pickTodo(value, today) {
-    const out = { overdue: [], today: [] };
+    const out = { overdue: [], today: [], tomorrow: [], week: [] };
     if (value == null) return out;
     // 本番の app_kv.value は text（JSON文字列）なので、文字列なら読み解く
     if (typeof value === 'string') {
@@ -43,6 +43,9 @@
     const grName = (id) => { const g = grOf(id); return g && typeof g.name === 'string' ? g.name : ''; };
     const grColor = (id) => { const g = grOf(id); return g && GROUP_COLORS.indexOf(g.color) >= 0 ? g.color : 'gray'; };
 
+    const tmr = nextDayISO(today);
+    let weekEnd = today;
+    for (let i = 0; i < 7; i++) weekEnd = nextDayISO(weekEnd);
     const rows = [];
     value.items.forEach((it, idx) => {
       if (!it || typeof it !== 'object' || Array.isArray(it)) return;
@@ -56,7 +59,9 @@
       if (it.roll === true && it.date <= today) kind = 'today'; // 繰り越しは、古い日付でも今日の分
       else if (it.date <= today && end >= today) kind = 'today';
       else if (end < today) kind = 'overdue';
-      else return; // 明日以降
+      else if (it.date === tmr) kind = 'tomorrow'; // 明日から始まるもの
+      else if (it.date <= weekEnd) kind = 'week'; // 明後日〜7日後
+      else return; // それより先
       rows.push({
         kind, idx,
         ord: typeof it.ord === 'number' && isFinite(it.ord) ? it.ord : Infinity,
@@ -89,6 +94,12 @@
     rows.filter((r) => r.kind === 'today')
       .sort(byTime)
       .forEach((r) => out.today.push(r.row));
+    rows.filter((r) => r.kind === 'tomorrow')
+      .sort(byTime)
+      .forEach((r) => out.tomorrow.push(r.row));
+    rows.filter((r) => r.kind === 'week')
+      .sort((a, b) => cmp(a.row.date, b.row.date) || byTime(a, b)) // 近い日から
+      .forEach((r) => out.week.push(r.row));
     return out;
   }
 

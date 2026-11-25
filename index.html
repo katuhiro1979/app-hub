@@ -11,7 +11,7 @@
 try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; var z = localStorage.getItem('hub-fontsize'); if (z === 's' || z === 'l' || z === 'xl') document.documentElement.dataset.fs = z; } catch (e) {}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="today-logic.js?v=20261126"></script>
+<script src="today-logic.js?v=20261127"></script>
 <style>
   /* 文字サイズ: 基準を変えると、rem で書いた文字が一緒に変わる（端末ごとの設定） */
   :root { font-size: 87.5%; } /* 標準（以前の「小」と同じ） */
@@ -156,6 +156,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .today-sec li a, .today-sec li > span.t { display: flex; align-items: center; flex: 1; min-width: 0; min-height: 44px; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
   .today-sec li a:hover { text-decoration: underline; }
   .today-time { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; font-size: max(0.8125rem, 11.5px); }
+  .today-sec[data-sec="tomorrow"] .today-date-sm, .today-sec[data-sec="week"] .today-date-sm { color: var(--muted); }
   .today-date-sm { flex: none; color: var(--danger); font-size: max(0.8125rem, 11.5px); font-variant-numeric: tabular-nums; }
   .today { --c-amber-bg:#fbe8b8;--c-amber-fg:#6b4500;--c-green-bg:#dcefe2;--c-green-fg:#1f6b3b;--c-blue-bg:#dce9f6;--c-blue-fg:#27598a;--c-red-bg:#f9dedb;--c-red-fg:#a3231b;--c-purple-bg:#e9e0f5;--c-purple-fg:#5b3a8c;--c-pink-bg:#f9e0ec;--c-pink-fg:#a02b63;--c-teal-bg:#d6eeee;--c-teal-fg:#1b6567;--c-gray-bg:#e6e8e4;--c-gray-fg:#4b554f; } /* ToDo のグループの色（ToDo と同じ配色） */
   @media (prefers-color-scheme: dark) {
@@ -441,9 +442,9 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     #todayTabs button.alert { color: var(--danger); }
     #todayTabs button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; border-radius: 8px; }
     .today-sec h3 { display: none; }
-    .today[data-tab="today"] .today-sec[data-sec="overdue"], .today[data-tab="overdue"] .today-sec[data-sec="todo"] { display: none; }
+    .today[data-tab="today"] .today-sec:not([data-sec="todo"]), .today[data-tab="tomorrow"] .today-sec:not([data-sec="tomorrow"]), .today[data-tab="week"] .today-sec:not([data-sec="week"]), .today[data-tab="overdue"] .today-sec:not([data-sec="overdue"]) { display: none; }
     .pc-only { display: block; }
-    .today[data-tab="today"] [data-empty="overdue"], .today[data-tab="overdue"] [data-empty="todo"] { display: none; }
+    .today[data-tab="today"] [data-empty]:not([data-empty="todo"]), .today[data-tab="tomorrow"] [data-empty]:not([data-empty="tomorrow"]), .today[data-tab="week"] [data-empty]:not([data-empty="week"]), .today[data-tab="overdue"] [data-empty]:not([data-empty="overdue"]) { display: none; }
   }
 
   /* ---- スマホ: 1列の横長行、ダイアログは下から出るシート ---- */
@@ -1365,7 +1366,7 @@ $('retryBtn').onclick = () => { renderSkeleton(); loadApps(); };
 let todayState = { todo: { status: 'loading' }, loadedAt: null, day: '', warn: false };
 const TODAY_TEXT_MAX = 100;
 const TODAY_LIST_MAX = 5; // 項目が多いときは、各まとまりごとにここまで出す
-const todayOpen = { overdue: false, todo: false }; // 「さらに○件」を開いているか（更新しても保つ）
+const todayOpen = { overdue: false, todo: false, tomorrow: false, week: false }; // 「さらに○件」を開いているか（更新しても保つ）
 let todayTab = null; // PC幅のタブ 'today' | 'overdue'（null は最初の選び直し）
 
 // 枠を描く。state.todo.status は 'loading' | 'ok' | 'error'
@@ -1389,7 +1390,7 @@ function renderToday(state) {
     b.id = 'todayRetry'; b.type = 'button'; b.className = 'btn'; b.textContent = '再読み込み';
     b.onclick = () => loadToday();
     body.append(b);
-  } else if (!t.rows.overdue.length && !t.rows.today.length) {
+  } else if (!t.rows.overdue.length && !t.rows.today.length && !t.rows.tomorrow.length && !t.rows.week.length) {
     if (state.warn) body.append(todayWarnEl(state));
     body.append(msg('今日の予定はありません'));
   } else {
@@ -1450,13 +1451,15 @@ function renderToday(state) {
       }
       body.append(sec);
     };
-    // PC幅のタブ（スマホ幅では CSS で隠し、2つのまとまりを縦に並べる）。選んだタブが0件なら選び直す
-    const nOver = t.rows.overdue.length, nToday = t.rows.today.length;
-    if (!((todayTab === 'overdue' && nOver) || (todayTab === 'today' && nToday))) todayTab = nToday ? 'today' : 'overdue';
+    // PC幅のタブ（スマホ幅では CSS で隠し、まとまりを縦に並べる）。今日・明日・1週間以内（明後日〜7日後）・期限切れ
+    const rowsOf = { today: t.rows.today, tomorrow: t.rows.tomorrow || [], week: t.rows.week || [], overdue: t.rows.overdue };
+    const TABS = [['today', '今日', 'tabToday'], ['tomorrow', '明日', 'tabTomorrow'], ['week', '1週間以内', 'tabWeek'], ['overdue', '期限切れ', 'tabOverdue']];
+    if (!TABS.some((x) => x[0] === todayTab)) todayTab = ['today', 'overdue', 'tomorrow', 'week'].find((k) => rowsOf[k].length) || 'today';
     box.dataset.tab = todayTab;
     const tabs = document.createElement('div');
     tabs.id = 'todayTabs'; tabs.setAttribute('role', 'tablist');
-    const mkTab = (id, kind, label, n) => {
+    TABS.forEach(([kind, label, id], i) => {
+      const n = rowsOf[kind].length;
       const b = document.createElement('button');
       b.id = id; b.type = 'button'; b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', todayTab === kind ? 'true' : 'false');
@@ -1467,18 +1470,20 @@ function renderToday(state) {
       b.onkeydown = (e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         e.preventDefault();
-        todayTab = kind === 'today' ? 'overdue' : 'today';
+        const j = (i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length;
+        todayTab = TABS[j][0];
         renderToday(todayState);
-        $(todayTab === 'today' ? 'tabToday' : 'tabOverdue').focus();
+        $(TABS[j][2]).focus();
       };
-      return b;
-    };
-    tabs.append(mkTab('tabToday', 'today', '今日', nToday), mkTab('tabOverdue', 'overdue', '期限切れ', nOver));
+      tabs.append(b);
+    });
     body.prepend(tabs);
     section('overdue', '期限切れ', t.rows.overdue, true);
     section('todo', 'ToDo', t.rows.today, false);
+    section('tomorrow', '明日', rowsOf.tomorrow, false);
+    section('week', '1週間以内', rowsOf.week, true);
     // 選んでいるタブが0件のときの案内（PC幅のみ）
-    [['overdue', nOver, '期限切れはありません'], ['todo', nToday, '今日の項目はありません']].forEach(([k, n, text]) => {
+    [['todo', rowsOf.today.length, '今日の項目はありません'], ['overdue', rowsOf.overdue.length, '期限切れはありません'], ['tomorrow', rowsOf.tomorrow.length, '明日の項目はありません'], ['week', rowsOf.week.length, '1週間以内の項目はありません']].forEach(([k, n, text]) => {
       if (n) return;
       const p = msg(text); p.className += ' pc-only'; p.dataset.empty = k;
       body.append(p);
@@ -1863,7 +1868,7 @@ function applySession(session) {
   $('mainView').classList.toggle('hidden', !loggedIn);
   if (channel) { sb.removeChannel(channel); channel = null; }
   closeMenu(false);
-  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = false; todayTab = null; shiftSeq++; shiftState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('shiftBox').classList.add('hidden'); sojiSeq++; sojiState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('sojiBox').classList.add('hidden'); backupSeq++; backupState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('backupBox').classList.add('hidden'); $('shiftBody').replaceChildren(); $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
+  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = todayOpen.tomorrow = todayOpen.week = false; todayTab = null; shiftSeq++; shiftState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('shiftBox').classList.add('hidden'); sojiSeq++; sojiState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('sojiBox').classList.add('hidden'); backupSeq++; backupState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('backupBox').classList.add('hidden'); $('shiftBody').replaceChildren(); $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
   if (loggedIn) {
     userEmail = session.user.email;
     apps = [];
