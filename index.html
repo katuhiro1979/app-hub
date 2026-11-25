@@ -183,7 +183,11 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .shift-next { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .shift-next b { font-size: 16px; color: var(--text); }
   /* 右の列（出勤簿・掃除）。どちらも出ないときは列ごと消す */
-  .today-side { display: grid; gap: 16px; align-items: start; min-width: 0; }
+  /* スマホ幅: 右の列の枠は外し、出勤簿 → ToDo → 掃除 の順に縦に並べる。PC幅は右の列にまとめる */
+  .today-side { display: contents; }
+  #shiftBox { order: 1; }
+  #todayBox { order: 2; }
+  #sojiBox { order: 3; }
   .today-side:not(:has(.today:not(.hidden))) { display: none; }
   .soji-lbl { margin: 8px 0 2px; font-size: 12px; font-weight: 700; color: var(--muted); }
   .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; min-height: 36px; }
@@ -198,7 +202,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     .today-row { grid-template-columns: minmax(0, 1fr) minmax(0, 360px); }
     .today-row:not(:has(.today-side .today:not(.hidden))) { grid-template-columns: minmax(0, 1fr); }
     #todayBox { order: 1; }
-    .today-side { order: 2; }
+    .today-side { display: grid; gap: 16px; align-items: start; min-width: 0; order: 2; }
   }
 
   /* ---- アプリ一覧 ---- */
