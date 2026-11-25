@@ -444,9 +444,15 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     #todayTabs button.alert { color: var(--danger); }
     #todayTabs button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; border-radius: 8px; }
     .today-sec h3 { display: none; }
-    .today[data-tab="today"] .today-sec:not([data-sec="todo"]), .today[data-tab="tomorrow"] .today-sec:not([data-sec="tomorrow"]), .today[data-tab="week"] .today-sec:not([data-sec="week"]), .today[data-tab="overdue"] .today-sec:not([data-sec="overdue"]) { display: none; }
+    .today[data-tab="today"] .today-sec:not([data-sec="todo"]), .today[data-tab="tomorrow"] .today-sec:not([data-sec="tomorrow"]), .today[data-tab="week"] .today-sec:not([data-sec="week"]), .today[data-tab="overdue"] .today-sec:not([data-sec="overdue"]) { visibility: hidden; pointer-events: none; }
+    /* 4つの中身を同じ場所に重ねて置く（枠の高さは、いちばん高いタブにそろい、切り替えても動かない） */
+    #todayBody { display: grid; }
+    #todayBody > * { min-width: 0; }
+    #todayTabs { grid-area: 1 / 1; }
+    #todayWarn { grid-area: 2 / 1; }
+    #todayBody .today-sec, #todayBody [data-empty] { grid-area: 3 / 1; }
     .pc-only { display: block; }
-    .today[data-tab="today"] [data-empty]:not([data-empty="todo"]), .today[data-tab="tomorrow"] [data-empty]:not([data-empty="tomorrow"]), .today[data-tab="week"] [data-empty]:not([data-empty="week"]), .today[data-tab="overdue"] [data-empty]:not([data-empty="overdue"]) { display: none; }
+    .today[data-tab="today"] [data-empty]:not([data-empty="todo"]), .today[data-tab="tomorrow"] [data-empty]:not([data-empty="tomorrow"]), .today[data-tab="week"] [data-empty]:not([data-empty="week"]), .today[data-tab="overdue"] [data-empty]:not([data-empty="overdue"]) { visibility: hidden; pointer-events: none; }
   }
 
   /* ---- スマホ: 1列の横長行、ダイアログは下から出るシート ---- */
