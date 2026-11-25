@@ -1601,7 +1601,7 @@ function renderShift() {
       main.append(el('span', 'shift-name', today.name));
       const t = shiftTimeText(today);
       if (t) main.append(el('span', 'shift-time', t));
-      if (today.label && today.label !== today.name) main.append(el('span', 'shift-badge', today.label));
+      if (today.label && today.label !== today.name && today.label !== '勤務') main.append(el('span', 'shift-badge', today.label));
       if (today.plan) { const pl = el('span', 'sd-plan', today.plan.replace(/\s+/g, ' ')); pl.title = today.plan; main.append(pl); } // 予定は勤務の横に
       body.append(main);
     } else {
