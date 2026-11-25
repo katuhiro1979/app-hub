@@ -281,6 +281,61 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
+  /* ---- 左メニュー・今日のタブ（PC幅のみ。スマホ幅は表示しない） ---- */
+  .side, #todayTabs, .pc-only { display: none; }
+  @media (min-width: 900px) {
+    .wrap { max-width: 1260px; }
+    #mainView { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+    .content { min-width: 0; }
+    .side {
+      display: flex; flex-direction: column; gap: 2px; position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto;
+      padding: 12px 10px; border-radius: 20px; background: #1e2a4a; color: #fff; box-shadow: 0 6px 18px rgba(20, 22, 28, .12);
+    }
+    .side-item, .side-app {
+      appearance: none; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px;
+      background: none; color: inherit; font: inherit; font-size: 15px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer;
+    }
+    .side-item[aria-current="page"] { background: rgba(255, 255, 255, .16); }
+    .side-item:hover, .side-app:hover { background: rgba(255, 255, 255, .1); }
+    .side-item:focus-visible, .side-app:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+    .side-sep { height: 1px; margin: 8px 6px; background: rgba(255, 255, 255, .18); }
+    .side-apps { display: flex; flex-direction: column; gap: 2px; }
+    .side-row { display: flex; align-items: center; border-radius: 12px; }
+    .side-row:hover { background: rgba(255, 255, 255, .1); }
+    .side-row .side-app { flex: 1; min-width: 0; }
+    .side-row .side-app:hover { background: none; }
+    .side-more {
+      appearance: none; flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: none; color: rgba(255, 255, 255, .7);
+      display: grid; place-items: center; cursor: pointer;
+    }
+    .side-more:hover, .side-more[aria-expanded="true"] { background: rgba(255, 255, 255, .14); color: #fff; }
+    .side-more:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+    .side-search { width: 100%; min-height: 40px; margin: 0 0 6px; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, .25); border-radius: 12px; background: rgba(255, 255, 255, .08); color: #fff; font: inherit; font-size: 14px; }
+    .side-search::placeholder { color: rgba(255, 255, 255, .6); }
+    .side-search:focus-visible { outline: 3px solid #fff; outline-offset: 1px; }
+    .side-nohit { margin: 6px 12px; font-size: 13px; color: rgba(255, 255, 255, .7); }
+    /* MY APPS（カード一覧）は、PC幅では左メニューに任せて出さない */
+    .section-title, #searchWrap, #appList, #nohit { display: none !important; }
+    .side-icon { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; }
+    .side-icon img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; display: block; }
+    .side-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .side-plus { width: 28px; text-align: center; font-size: 20px; line-height: 1; }
+    .today, .card { box-shadow: 0 1px 3px rgba(20, 22, 28, .06), 0 6px 18px rgba(20, 22, 28, .05); }
+    /* 今日の枠: タブで「今日」と「期限切れ」を切り替える（見出しはタブが兼ねる） */
+    #todayTabs { display: flex; gap: 6px; margin: 4px 0 8px; border-bottom: 1px solid var(--border); }
+    #todayTabs button {
+      appearance: none; min-height: 44px; padding: 0 14px; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; background: none;
+      color: var(--muted); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    #todayTabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+    #todayTabs button.alert { color: var(--danger); }
+    #todayTabs button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; border-radius: 8px; }
+    .today-sec h3 { display: none; }
+    .today[data-tab="today"] .today-sec[data-sec="overdue"], .today[data-tab="overdue"] .today-sec[data-sec="todo"] { display: none; }
+    .pc-only { display: block; }
+    .today[data-tab="today"] [data-empty="overdue"], .today[data-tab="overdue"] [data-empty="todo"] { display: none; }
+  }
+
   /* ---- スマホ: 1列の横長行、ダイアログは下から出るシート ---- */
   @media (max-width: 600px) {
     .wrap { padding: 16px 14px 40px; }
@@ -329,6 +384,19 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
 
   <!-- メイン画面 -->
   <main id="mainView" class="hidden">
+    <!-- 左メニュー（PC幅のみ表示） -->
+    <nav id="sideNav" class="side" aria-label="メニュー">
+      <button id="sideHome" class="side-item" type="button" aria-current="page">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span>ホーム</span>
+      </button>
+      <div class="side-sep" role="separator"></div>
+      <input id="sideSearch" class="side-search hidden" type="search" placeholder="アプリを検索" aria-label="アプリを検索" autocomplete="off">
+      <div id="sideApps" class="side-apps"></div>
+      <p id="sideNohit" class="side-nohit hidden">一致するアプリがありません。</p>
+      <button id="sideAdd" class="side-item" type="button"><span class="side-plus" aria-hidden="true">＋</span><span>アプリを追加</span></button>
+    </nav>
+    <div class="content">
     <header class="top">
       <div class="brand">
         <div class="logo" aria-hidden="true">
@@ -365,6 +433,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     </div>
     <p id="nohit" class="nohit hidden">一致するアプリがありません。</p>
     <ul id="appList" class="grid"></ul>
+    </div>
   </main>
 </div>
 
@@ -774,8 +843,73 @@ function render() {
   addBtn.onclick = () => openDialog(null);
   addLi.append(addBtn);
   ul.append(addLi);
+  renderSide();
   discoverIcons();
 }
+
+// 左メニュー（PC幅のみ表示）。アプリを一覧と同じ並びで出す。検索で絞り込んでも全件出す
+let sideQuery = '';
+function renderSide() {
+  closeMenu(false);
+  const box = $('sideApps');
+  box.replaceChildren();
+  const showSearch = apps.length >= 6;
+  $('sideSearch').classList.toggle('hidden', !showSearch);
+  const q = showSearch ? sideQuery.trim().toLowerCase() : '';
+  const list = q ? apps.filter((a) => `${a.name} ${a.description || ''} ${hostOf(a.url || '')}`.toLowerCase().includes(q)) : apps;
+  $('sideNohit').classList.toggle('hidden', !(apps.length > 0 && list.length === 0));
+  list.forEach((a) => {
+    const isLink = /^https?:\/\//i.test(a.url || '');
+    let el;
+    if (isLink) {
+      el = document.createElement('a');
+      el.href = a.url;
+      el.target = 'app:' + a.url; // 一覧のカードと同じ名前のタブで開く
+    } else {
+      el = document.createElement('button');
+      el.type = 'button';
+      el.onclick = () => openDialog(a);
+    }
+    el.className = 'side-app';
+    el.dataset.id = a.id;
+    el.title = a.name;
+    const icon = document.createElement('span');
+    icon.className = 'side-icon';
+    icon.style.background = iconColor(a.name, a.color);
+    icon.textContent = Array.from(a.name)[0] || '?';
+    if (iconSrc(a.color)) setIconImg(icon, iconSrc(a.color));
+    else if (isLink && appIcons[a.url]) setIconImg(icon, appIcons[a.url]);
+    const name = document.createElement('span');
+    name.className = 'side-name';
+    name.textContent = a.name;
+    el.append(icon, name);
+
+    // 「⋯」メニュー（一覧のカードと同じ操作。並べ替えは検索で絞り込んでいない間だけ）
+    const more = document.createElement('button');
+    more.className = 'side-more';
+    more.type = 'button';
+    more.innerHTML = DOTS;
+    more.setAttribute('aria-label', `${a.name} のメニュー`);
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    const idx = apps.indexOf(a);
+    const moves = [];
+    if (!q && idx > 0) moves.push({ label: '上へ', run: () => moveApp(a, -1) });
+    if (!q && idx < apps.length - 1) moves.push({ label: '下へ', run: () => moveApp(a, 1) });
+    more.onclick = () => openMenu(more, [
+      { label: '編集', run: () => openDialog(a) },
+      ...moves,
+      { label: '一覧から削除', danger: true, run: () => deleteApp(a) },
+    ]);
+    const row = document.createElement('div');
+    row.className = 'side-row';
+    row.append(el, more);
+    box.append(row);
+  });
+}
+$('sideSearch').addEventListener('input', (e) => { sideQuery = e.target.value; renderSide(); });
+$('sideAdd').onclick = () => openDialog(null);
+$('sideHome').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
 // ---- 各アプリのアイコン画像（アプリのページの <link rel="icon"> から自動で取得）----
 // 取得に成功した分だけ、この端末に覚えておく。見つからないアプリは、これまでの「頭文字＋色」のまま
@@ -819,6 +953,10 @@ function discoverIcons() {
         const x = apps.find((y) => y.id === li.dataset.id);
         if (x && x.url === a.url && !iconSrc(x.color)) setIconImg(li.querySelector('.icon'), src);
       });
+      document.querySelectorAll('#sideApps .side-app').forEach((el) => {
+        const x = apps.find((y) => y.id === el.dataset.id);
+        if (x && x.url === a.url && !iconSrc(x.color)) setIconImg(el.querySelector('.side-icon'), src);
+      });
     });
   });
 }
@@ -855,6 +993,7 @@ let todayState = { todo: { status: 'loading' }, loadedAt: null, day: '', warn: f
 const TODAY_TEXT_MAX = 100;
 const TODAY_LIST_MAX = 5; // 項目が多いときは、各まとまりごとにここまで出す
 const todayOpen = { overdue: false, todo: false }; // 「さらに○件」を開いているか（更新しても保つ）
+let todayTab = null; // PC幅のタブ 'today' | 'overdue'（null は最初の選び直し）
 
 // 枠を描く。state.todo.status は 'loading' | 'ok' | 'error'
 function renderToday(state) {
@@ -936,8 +1075,39 @@ function renderToday(state) {
       }
       body.append(sec);
     };
+    // PC幅のタブ（スマホ幅では CSS で隠し、2つのまとまりを縦に並べる）。選んだタブが0件なら選び直す
+    const nOver = t.rows.overdue.length, nToday = t.rows.today.length;
+    if (!((todayTab === 'overdue' && nOver) || (todayTab === 'today' && nToday))) todayTab = nToday ? 'today' : 'overdue';
+    box.dataset.tab = todayTab;
+    const tabs = document.createElement('div');
+    tabs.id = 'todayTabs'; tabs.setAttribute('role', 'tablist');
+    const mkTab = (id, kind, label, n) => {
+      const b = document.createElement('button');
+      b.id = id; b.type = 'button'; b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', todayTab === kind ? 'true' : 'false');
+      b.tabIndex = todayTab === kind ? 0 : -1;
+      if (kind === 'overdue' && n) b.className = 'alert'; // 期限切れがあるときは赤系で目立たせる
+      b.textContent = label + '（' + n + '）';
+      b.onclick = () => { todayTab = kind; renderToday(todayState); };
+      b.onkeydown = (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        todayTab = kind === 'today' ? 'overdue' : 'today';
+        renderToday(todayState);
+        $(todayTab === 'today' ? 'tabToday' : 'tabOverdue').focus();
+      };
+      return b;
+    };
+    tabs.append(mkTab('tabToday', 'today', '今日', nToday), mkTab('tabOverdue', 'overdue', '期限切れ', nOver));
+    body.prepend(tabs);
     section('overdue', '期限切れ', t.rows.overdue, true);
     section('todo', 'ToDo', t.rows.today, false);
+    // 選んでいるタブが0件のときの案内（PC幅のみ）
+    [['overdue', nOver, '期限切れはありません'], ['todo', nToday, '今日の項目はありません']].forEach(([k, n, text]) => {
+      if (n) return;
+      const p = msg(text); p.className += ' pc-only'; p.dataset.empty = k;
+      body.append(p);
+    });
   }
   const at = state.loadedAt;
   $('todayStamp').textContent = at ? '最終更新 ' + String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') : '';
@@ -1032,13 +1202,15 @@ function applySession(session) {
   $('mainView').classList.toggle('hidden', !loggedIn);
   if (channel) { sb.removeChannel(channel); channel = null; }
   closeMenu(false);
-  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = false; $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
+  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = false; todayTab = null; $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
   if (loggedIn) {
     userEmail = session.user.email;
     apps = [];
     query = '';
+    sideQuery = '';
     loadFailed = false;
     $('search').value = '';
+    $('sideSearch').value = '';
     renderSkeleton();
     loadApps();
     todayState = { todo: { status: 'loading' }, loadedAt: null, day: '', warn: false };
