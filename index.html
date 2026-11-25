@@ -237,7 +237,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .bk-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 0; font-size: max(0.8125rem, 11.5px); font-weight: 600; color: var(--accent); }
   .soji-lbl { margin: 8px 0 2px; font-size: max(0.75rem, 11px); font-weight: 700; color: var(--muted); }
   .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 0.9375rem; min-height: 44px; }
-  .soji-tag { color: var(--text); border-color: transparent; background: var(--surface-2); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .soji-tag { --tc: var(--muted); color: color-mix(in srgb, var(--tc) 60%, var(--text)); border-color: transparent; background: color-mix(in srgb, var(--tc) 20%, transparent); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .soji-lbl + .soji-row { border-top: 0; }
   .soji-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .soji-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -1672,7 +1672,7 @@ function renderSoji() {
       // ToDo と同じ「札 + 題名」。部屋名（member）を札にして、色は部屋の色を薄く使う
       if (r.member && r.member !== r.title) {
         const tag = el('span', 'today-tag soji-tag', r.member);
-        if (r.color) tag.style.background = 'color-mix(in srgb, ' + r.color + ' 22%, transparent)';
+        if (r.color) tag.style.setProperty('--tc', r.color);
         d.append(tag, el('span', 'soji-t', r.title));
       } else {
         const dot = el('span', 'soji-dot');
