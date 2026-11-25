@@ -236,7 +236,9 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .bk-sub { margin: 0 0 6px; font-size: max(0.8125rem, 11.5px); color: var(--muted); }
   .bk-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 0; font-size: max(0.8125rem, 11.5px); font-weight: 600; color: var(--accent); }
   .soji-lbl { margin: 8px 0 2px; font-size: max(0.75rem, 11px); font-weight: 700; color: var(--muted); }
-  .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 0.875rem; min-height: 44px; }
+  .soji-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 0.9375rem; min-height: 44px; }
+  .soji-tag { color: var(--text); border-color: transparent; background: var(--surface-2); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .soji-lbl + .soji-row { border-top: 0; }
   .soji-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .soji-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .soji-days.strong { background: var(--danger); color: var(--on-danger); }
@@ -1667,9 +1669,16 @@ function renderSoji() {
     }
     const row = (r, days) => {
       const d = sojiLink(el('div', 'soji-row'), r.id);
-      const dot = el('span', 'soji-dot');
-      if (r.color) dot.style.background = r.color;
-      d.append(dot, el('span', 'soji-t', sojiLabel(r)));
+      // ToDo と同じ「札 + 題名」。部屋名（member）を札にして、色は部屋の色を薄く使う
+      if (r.member && r.member !== r.title) {
+        const tag = el('span', 'today-tag soji-tag', r.member);
+        if (r.color) tag.style.background = 'color-mix(in srgb, ' + r.color + ' 22%, transparent)';
+        d.append(tag, el('span', 'soji-t', r.title));
+      } else {
+        const dot = el('span', 'soji-dot');
+        if (r.color) dot.style.background = r.color;
+        d.append(dot, el('span', 'soji-t', r.title));
+      }
       if (days) d.append(el('span', 'soji-days' + (r.days >= SOJI_STRONG_DAYS ? ' strong' : ''), r.days + '日超過'));
       return d;
     };
