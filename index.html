@@ -198,6 +198,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .shift-week { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--border); }
   .shift-day { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 0; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--text); font-variant-numeric: tabular-nums; text-decoration: none; }
   .soji-lbl + .shift-day { border-top: 0; }
+  .shift-day.shift-today { border-top: 0; margin-top: 4px; }
   a.shift-day:hover .sd-name { text-decoration: underline; }
   .shift-day .sd-date { flex: none; min-width: 6.5em; color: var(--muted); }
   .shift-day .sd-date.sat { color: var(--c-blue-fg, #27598a); }
@@ -1596,34 +1597,28 @@ function renderShift() {
       w.id = 'shiftWarn'; w.setAttribute('role', 'alert');
       body.append(w);
     }
-    if (today) {
-      const main = shiftLink(el('div', 'shift-main'), s.day);
-      main.append(el('span', 'shift-name', today.name));
-      const t = shiftTimeText(today);
-      if (t) main.append(el('span', 'shift-time', t));
-      if (today.label && today.label !== today.name && today.label !== '勤務') main.append(el('span', 'shift-badge', today.label));
-      if (today.plan) { const pl = el('span', 'sd-plan', today.plan.replace(/\s+/g, ' ')); pl.title = today.plan; main.append(pl); } // 予定は勤務の横に
-      body.append(main);
-    } else {
-      body.append(el('p', 'today-msg', '今日の記録はありません'));
-    }
+    // 今日も、このあとの6日も、同じ並び（日付・曜日｜勤務名｜時刻｜予定）の1行にそろえる
+    const WD = ['日', '月', '火', '水', '木', '金', '土'];
+    const mkRow = (extra, day, sh) => {
+      const dt = new Date(day + 'T00:00:00Z'), wd = dt.getUTCDay();
+      const row = shiftLink(el('div', 'shift-day' + extra + (sh ? '' : ' none')), day);
+      row.append(el('span', 'sd-date' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : ''), (dt.getUTCMonth() + 1) + '/' + dt.getUTCDate() + '（' + WD[wd] + '）'));
+      if (sh) {
+        row.append(el('b', 'sd-name', sh.name));
+        const t = shiftTimeText(sh);
+        if (t) row.append(el('span', 'sd-time', t));
+        if (extra && sh.label && sh.label !== sh.name && sh.label !== '勤務') row.append(el('span', 'shift-badge', sh.label)); // 休日・有給など（「勤務」は出さない）
+        if (sh.plan) { const pl = el('span', 'sd-plan', sh.plan.replace(/\s+/g, ' ')); pl.title = sh.plan; row.append(pl); } // 出勤簿に書いた予定（勤務の横）
+      } else row.append(el('span', 'sd-time', '記録なし'));
+      return row;
+    };
+    if (today) body.append(mkRow(' shift-today', s.day, today));
+    else body.append(el('p', 'today-msg', '今日の記録はありません'));
     if (upcoming.length) {
-      // 明日から 6 日先まで（今日と合わせて 1 週間）。日付・曜日・勤務・時刻を 1 行ずつ
+      // 明日から 6 日先まで（今日と合わせて 1 週間）
       const wk = el('div', 'shift-week');
       wk.append(el('div', 'soji-lbl', 'このあと 6 日'));
-      const WD = ['日', '月', '火', '水', '木', '金', '土'];
-      upcoming.forEach((u) => {
-        const dt = new Date(u.day + 'T00:00:00Z'), wd = dt.getUTCDay();
-        const row = shiftLink(el('div', 'shift-day' + (u.shift ? '' : ' none')), u.day);
-        row.append(el('span', 'sd-date' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : ''), (dt.getUTCMonth() + 1) + '/' + dt.getUTCDate() + '（' + WD[wd] + '）'));
-        if (u.shift) {
-          row.append(el('b', 'sd-name', u.shift.name));
-          const t = shiftTimeText(u.shift);
-          if (t) row.append(el('span', 'sd-time', t));
-          if (u.shift.plan) { const pl = el('span', 'sd-plan', u.shift.plan.replace(/\s+/g, ' ')); pl.title = u.shift.plan; row.append(pl); } // 出勤簿に書いた予定（勤務の横）
-        } else row.append(el('span', 'sd-time', '記録なし'));
-        wk.append(row);
-      });
+      upcoming.forEach((u) => wk.append(mkRow('', u.day, u.shift)));
       body.append(wk);
     }
   }
