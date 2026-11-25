@@ -151,7 +151,7 @@
         days: Math.max(0, Math.round(dayNum(today) - dayNum(t.next)))
       };
       if (t.next === today) out.today.push(row);
-      else if (t.next < today) out.overdue.push(row);
+      else if (t.next < today) { if (t.topOver !== false) out.overdue.push(row); } // 掃除アプリで「期限切れを今日やることに出す」をオフにした項目は出さない（未設定はオン扱い）
       else if (t.next === tmr) out.tomorrow.push(row);
     });
     out.overdue.sort((a, b) => b.days - a.days); // 古い順（過ぎた日数が多い順）
