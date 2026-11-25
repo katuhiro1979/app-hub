@@ -14,9 +14,10 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
 <script src="today-logic.js"></script>
 <style>
   /* 文字サイズ: 基準を変えると、rem で書いた文字が一緒に変わる（端末ごとの設定） */
-  :root[data-fs="s"] { font-size: 87.5%; }
-  :root[data-fs="l"] { font-size: 115%; }
-  :root[data-fs="xl"] { font-size: 130%; }
+  :root { font-size: 87.5%; } /* 標準（以前の「小」と同じ） */
+  :root[data-fs="s"] { font-size: 75%; }
+  :root[data-fs="l"] { font-size: 100%; }
+  :root[data-fs="xl"] { font-size: 115%; }
   :root {
     --bg: #f5f6f8;
     --surface: #ffffff;
