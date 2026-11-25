@@ -213,6 +213,9 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .layout-note { margin: 0 0 12px; font-size: 0.8125rem; color: var(--muted); }
   .layout-list { list-style: none; margin: 0 0 12px; padding: 0; }
   .layout-list li { display: flex; align-items: center; gap: 8px; min-height: 52px; border-top: 1px solid var(--border); }
+  .layout-list li { position: relative; background: var(--surface); transition: transform .12s; }
+  .layout-list li.dragging { z-index: 2; transition: none; box-shadow: 0 6px 18px rgba(0,0,0,.25); border-radius: 12px; }
+  .layout-list .lgrip { flex: none; width: 32px; min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1.125rem; letter-spacing: -2px; cursor: grab; touch-action: none; user-select: none; }
   .layout-list .nm { flex: 1; min-width: 0; font-weight: 600; }
   .layout-list .mv { flex: none; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 1rem; cursor: pointer; }
   .layout-list .mv:disabled { opacity: .35; cursor: default; }
@@ -710,7 +713,10 @@ function renderLayoutDialog() {
     const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !hidden.includes(k);
     cb.onchange = () => toggleCard(k, cb.checked);
     lb.append(cb, '表示');
-    li.append(nm, mk('↑', '上へ', i === 0, -1), mk('↓', '下へ', i === order.length - 1, 1), lb);
+    const gp = document.createElement('span'); gp.className = 'lgrip'; gp.textContent = '⋮⋮'; gp.setAttribute('aria-hidden', 'true'); gp.title = 'ドラッグして並べ替え';
+    gp.addEventListener('pointerdown', (e) => startCardDrag(e, li, k));
+    li.dataset.k = k;
+    li.append(gp, nm, mk('↑', '上へ', i === 0, -1), mk('↓', '下へ', i === order.length - 1, 1), lb);
     ul.append(li);
   });
   $('layoutNone').classList.toggle('hidden', hidden.length < CARD_KEYS.length);
@@ -722,6 +728,41 @@ function moveCard(k, d) {
   if (j < 0 || j >= o.length) return;
   [o[i], o[j]] = [o[j], o[i]];
   saveCardLayout(); applyCardLayout(); renderLayoutDialog();
+}
+// つかんで動かす並べ替え(マウス・タッチ共通)。動かしている間は表示だけ動かし、離したときに確定する
+function startCardDrag(e, li, k) {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.preventDefault();
+  const ul = $('layoutList'), grip = e.currentTarget;
+  const items = [...ul.children], from = items.indexOf(li);
+  const tops = items.map((x) => x.getBoundingClientRect().top), h = li.getBoundingClientRect().height;
+  const y0 = e.clientY; let to = from;
+  try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+  li.classList.add('dragging');
+  const move = (ev) => {
+    const lo = tops[0] - from * 0, hi = tops[items.length - 1];
+    const dy = Math.max(lo - tops[from], Math.min(hi - tops[from], ev.clientY - y0));
+    li.style.transform = 'translateY(' + dy + 'px)';
+    to = Math.max(0, Math.min(items.length - 1, Math.round(from + dy / h)));
+    items.forEach((x, i) => {
+      if (x === li) return;
+      const s = from < to && i > from && i <= to ? -h : from > to && i >= to && i < from ? h : 0;
+      x.style.transform = s ? 'translateY(' + s + 'px)' : '';
+    });
+  };
+  const end = (ev) => {
+    grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', end); grip.removeEventListener('pointercancel', end);
+    try { grip.releasePointerCapture(e.pointerId); } catch (_) {}
+    items.forEach((x) => { x.style.transform = ''; });
+    li.classList.remove('dragging');
+    if (ev.type === 'pointerup' && to !== from) {
+      ensureCardLayout();
+      const o = cardLayout.order; o.splice(to, 0, o.splice(from, 1)[0]);
+      saveCardLayout(); applyCardLayout();
+    }
+    renderLayoutDialog();
+  };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
 }
 function toggleCard(k, show) {
   ensureCardLayout();
