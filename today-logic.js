@@ -113,14 +113,18 @@
     return { name: type || label, label, clockIn, clockOut, overnight: !!clockIn && !!clockOut && clockOut < clockIn, plan };
   }
   function pickShift(value, today) {
-    const none = { today: null, tomorrow: null };
+    const none = { today: null, tomorrow: null, upcoming: [] };
     if (value == null) return none;
     if (typeof value === 'string') {
       try { value = JSON.parse(value); } catch (e) { throw new Error('形式が違います'); }
       if (value == null) return none;
     }
     if (typeof value !== 'object' || !value.records || typeof value.records !== 'object' || Array.isArray(value.records)) throw new Error('形式が違います');
-    return { today: shiftOf(value.records[today]), tomorrow: shiftOf(value.records[nextDayISO(today)]) };
+    // 明日から 6 日先まで（今日と合わせて 1 週間分）
+    const upcoming = [];
+    let d = today;
+    for (let i = 0; i < 6; i++) { d = nextDayISO(d); upcoming.push({ day: d, shift: shiftOf(value.records[d]) }); }
+    return { today: shiftOf(value.records[today]), tomorrow: upcoming[0].shift, upcoming };
   }
 
   // 掃除タスクマネージャーの保存データ { tasks: [{member,color,title,next,...}] } から、今日が期限・期限切れ・明日が期限を取り出す

@@ -194,6 +194,16 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .shift-plan { margin: 10px 0 0; font-size: 0.875rem; white-space: pre-wrap; overflow-wrap: anywhere; }
   .shift-next { min-height: 44px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .shift-next b { font-size: 1rem; color: var(--text); }
+  .shift-week { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--border); }
+  .shift-day { display: flex; align-items: center; gap: 10px; min-height: 44px; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--text); font-variant-numeric: tabular-nums; text-decoration: none; }
+  .soji-lbl + .shift-day { border-top: 0; }
+  a.shift-day:hover .sd-name { text-decoration: underline; }
+  .shift-day .sd-date { flex: none; min-width: 6.5em; color: var(--muted); }
+  .shift-day .sd-date.sat { color: var(--c-blue-fg, #27598a); }
+  .shift-day .sd-date.sun { color: var(--danger); }
+  .shift-day .sd-name { flex: none; font-size: 1rem; }
+  .shift-day .sd-time { color: var(--muted); font-size: max(0.8125rem, 11.5px); }
+  .shift-day.none .sd-time { opacity: .8; }
   /* 右の列（出勤簿・掃除）。どちらも出ないときは列ごと消す */
   /* スマホ幅: 右の列の枠は外し、出勤簿 → ToDo → 掃除 の順に縦に並べる。PC幅は右の列にまとめる */
   .today-side { display: contents; }
@@ -1573,8 +1583,8 @@ function renderShift() {
     b.id = 'shiftRetry'; b.type = 'button'; b.onclick = () => loadShift();
     body.append(b);
   } else {
-    const { today, tomorrow } = s.data;
-    if (!today && !tomorrow) { box.classList.add('hidden'); return; } // 今日も明日も記録がなければ出さない
+    const { today } = s.data, upcoming = s.data.upcoming || [];
+    if (!today && !upcoming.some((u) => u.shift)) { box.classList.add('hidden'); return; } // 今日から 1 週間、記録がなければ出さない
     if (s.warn) {
       const w = el('p', 'today-msg err', '更新に失敗しました' + (s.loadedAt ? '（最終更新 ' + hhmm(s.loadedAt) + '）' : ''));
       w.id = 'shiftWarn'; w.setAttribute('role', 'alert');
@@ -1591,12 +1601,23 @@ function renderShift() {
     } else {
       body.append(el('p', 'today-msg', '今日の記録はありません'));
     }
-    if (tomorrow) {
-      const nx = shiftLink(el('div', 'shift-next'), TodayLogic.nextDayISO(s.day));
-      nx.append('明日 ', el('b', null, tomorrow.name));
-      const t = shiftTimeText(tomorrow);
-      if (t) nx.append(el('span', null, t));
-      body.append(nx);
+    if (upcoming.length) {
+      // 明日から 6 日先まで（今日と合わせて 1 週間）。日付・曜日・勤務・時刻を 1 行ずつ
+      const wk = el('div', 'shift-week');
+      wk.append(el('div', 'soji-lbl', 'このあと 6 日'));
+      const WD = ['日', '月', '火', '水', '木', '金', '土'];
+      upcoming.forEach((u) => {
+        const dt = new Date(u.day + 'T00:00:00Z'), wd = dt.getUTCDay();
+        const row = shiftLink(el('div', 'shift-day' + (u.shift ? '' : ' none')), u.day);
+        row.append(el('span', 'sd-date' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : ''), (dt.getUTCMonth() + 1) + '/' + dt.getUTCDate() + '（' + WD[wd] + '）'));
+        if (u.shift) {
+          row.append(el('b', 'sd-name', u.shift.name));
+          const t = shiftTimeText(u.shift);
+          if (t) row.append(el('span', 'sd-time', t));
+        } else row.append(el('span', 'sd-time', '記録なし'));
+        wk.append(row);
+      });
+      body.append(wk);
     }
   }
   $('shiftStamp').textContent = s.loadedAt ? '最終更新 ' + hhmm(s.loadedAt) : '';
