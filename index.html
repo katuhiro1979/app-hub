@@ -1711,7 +1711,8 @@ async function loadBackupCard() {
     const { data, error } = await sb.from('app_kv').select('value').eq('app_name', 'バックアップ管理').eq('key', 'last-run').maybeSingle();
     if (my !== backupSeq) return;
     if (error) throw new Error('read');
-    const v = data && data.value;
+    let v = data && data.value;
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e2) { /* 形式が違う扱いにする */ } } // app_kv の value は文字列で入っている
     if (v != null && !(typeof v === 'object' && v.at && !isNaN(new Date(v.at)))) throw new Error('形式が違います');
     next = { status: 'ok', data: v || null, loadedAt: new Date(), warn: false };
   } catch (e) {
