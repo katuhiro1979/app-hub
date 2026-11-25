@@ -216,6 +216,12 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .layout-list li { position: relative; background: var(--surface); transition: transform .12s; }
   .layout-list li.dragging { z-index: 2; transition: none; box-shadow: 0 6px 18px rgba(0,0,0,.25); border-radius: 12px; }
   .layout-list .lgrip { flex: none; width: 32px; min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1.125rem; letter-spacing: -2px; cursor: grab; touch-action: none; user-select: none; }
+  .layout-list .nm { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .layout-list .wsel { max-width: 100%; min-height: 32px; margin: 0; padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.75rem; }
+  @media (min-width: 900px) {
+    .today-row.custom.has-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .today-row.custom.has-wide #shiftBox, .today-row.custom.has-wide #todayBox, .today-row.custom.has-wide #sojiBox { order: var(--rank, 0); }
+  }
   .layout-list .nm { flex: 1; min-width: 0; font-weight: 600; }
   .layout-list .mv { flex: none; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 1rem; cursor: pointer; }
   .layout-list .mv:disabled { opacity: .35; cursor: default; }
@@ -548,7 +554,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
 <!-- 「今日」のカードの並べ替え・表示ダイアログ -->
 <dialog id="layoutDialog" aria-labelledby="layoutTitle">
   <h3 id="layoutTitle">カードの並べ替え・表示</h3>
-  <p class="layout-note">上のカードから順に並びます。PC幅では、一番上のカードが左の広い欄になります。この端末だけの設定です。</p>
+  <p class="layout-note">上のカードから順に並びます。PC幅では、一番上のカードが左の広い欄になります。「横いっぱい」にしたカードは、PC幅で1段まるごと使います(スマホは常に1列)。この端末だけの設定です。</p>
   <ul id="layoutList" class="layout-list"></ul>
   <p id="layoutNone" class="dlg-err hidden" role="status">すべてのカードを非表示にしています。</p>
   <div class="row">
@@ -665,7 +671,7 @@ function loadCardLayout() {
   try {
     const v = JSON.parse(localStorage.getItem(CARD_LS));
     if (v && Array.isArray(v.order) && v.order.length === CARD_KEYS.length && CARD_KEYS.every((k) => v.order.includes(k))
-        && Array.isArray(v.hidden) && v.hidden.every((k) => CARD_KEYS.includes(k))) return { order: v.order.slice(), hidden: [...new Set(v.hidden)] };
+        && Array.isArray(v.hidden) && v.hidden.every((k) => CARD_KEYS.includes(k))) return { order: v.order.slice(), hidden: [...new Set(v.hidden)], wide: Array.isArray(v.wide) ? [...new Set(v.wide.filter((k) => CARD_KEYS.includes(k)))] : [] };
   } catch (e) {}
   return null;
 }
@@ -678,14 +684,18 @@ function applyCardLayout() {
   const row = document.querySelector('.today-row');
   CARD_KEYS.forEach((k) => { const el = $(CARD_ID[k]); el.classList.remove('user-hidden'); ['--rank', '--col', '--row', '--span'].forEach((v) => el.style.removeProperty(v)); });
   row.classList.toggle('custom', !!cardLayout);
+  row.classList.remove('has-wide');
   if (!cardLayout) { row.removeAttribute('data-n'); return; }
   cardLayout.hidden.forEach((k) => $(CARD_ID[k]).classList.add('user-hidden'));
   // データがなくて出ていないカード(.hidden)は数えない。残りを、上から順に並べる
   const vis = cardLayout.order.filter((k) => !cardLayout.hidden.includes(k) && !$(CARD_ID[k]).classList.contains('hidden'));
+  const wide = cardLayout.wide || [], hasWide = vis.some((k) => wide.includes(k)); // 横いっぱいのカードがあるとき(PC幅)は、2列に並べる
+  row.classList.toggle('has-wide', hasWide);
   vis.forEach((k, i) => {
     const el = $(CARD_ID[k]);
     el.style.setProperty('--rank', i + 1);
-    if (i === 0) { el.style.setProperty('--col', 1); el.style.setProperty('--row', 1); el.style.setProperty('--span', Math.max(1, vis.length - 1)); }
+    if (hasWide) { el.style.setProperty('--col', wide.includes(k) ? '1 / -1' : 'auto'); el.style.setProperty('--row', 'auto'); el.style.setProperty('--span', 1); }
+    else if (i === 0) { el.style.setProperty('--col', 1); el.style.setProperty('--row', 1); el.style.setProperty('--span', Math.max(1, vis.length - 1)); }
     else { el.style.setProperty('--col', 2); el.style.setProperty('--row', i); el.style.setProperty('--span', 1); }
   });
   row.dataset.n = vis.length;
@@ -703,7 +713,13 @@ function renderLayoutDialog() {
   const ul = $('layoutList'); ul.replaceChildren();
   order.forEach((k, i) => {
     const li = document.createElement('li');
-    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = CARD_NAME[k];
+    const nm = document.createElement('div'); nm.className = 'nm';
+    const nt = document.createElement('span'); nt.textContent = CARD_NAME[k];
+    const sel = document.createElement('select'); sel.className = 'wsel'; sel.setAttribute('aria-label', CARD_NAME[k] + 'の幅（PC幅のとき）');
+    [['', '幅：標準'], ['w', '幅：横いっぱい']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.append(o); });
+    sel.value = cardLayout && (cardLayout.wide || []).includes(k) ? 'w' : '';
+    sel.onchange = () => setWide(k, sel.value === 'w');
+    nm.append(nt, sel);
     const mk = (txt, label, dis, d) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'mv'; b.textContent = txt;
       b.setAttribute('aria-label', CARD_NAME[k] + 'を' + label); b.disabled = dis;
@@ -721,7 +737,7 @@ function renderLayoutDialog() {
   });
   $('layoutNone').classList.toggle('hidden', hidden.length < CARD_KEYS.length);
 }
-function ensureCardLayout() { if (!cardLayout) cardLayout = { order: defaultCardOrder(), hidden: [] }; }
+function ensureCardLayout() { if (!cardLayout) cardLayout = { order: defaultCardOrder(), hidden: [], wide: [] }; }
 function moveCard(k, d) {
   ensureCardLayout();
   const o = cardLayout.order, i = o.indexOf(k), j = i + d;
@@ -763,6 +779,12 @@ function startCardDrag(e, li, k) {
     renderLayoutDialog();
   };
   grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+}
+function setWide(k, on) {
+  ensureCardLayout();
+  cardLayout.wide = (cardLayout.wide || []).filter((x) => x !== k);
+  if (on) cardLayout.wide.push(k);
+  saveCardLayout(); applyCardLayout(); renderLayoutDialog();
 }
 function toggleCard(k, show) {
   ensureCardLayout();
