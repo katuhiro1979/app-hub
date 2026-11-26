@@ -119,7 +119,8 @@
     const clockIn = isTime(r.clockIn) ? r.clockIn : '';
     const clockOut = isTime(r.clockOut) ? r.clockOut : '';
     const plan = typeof r.plan === 'string' ? r.plan.trim() : '';
-    if (!type && !clockIn && !clockOut && !plan) return null; // 空の記録は「記録なし」
+    // 空の記録は「記録なし」。ただし区分が休日・法定休日・有給なら、種類が空でも区分名で出す（勤務は未入力の初期値なので出さない）
+    if (!type && !clockIn && !clockOut && !plan && !(label && r.kind !== 'work')) return null;
     if (!label && !type) return null;
     return { name: type || label, label, clockIn, clockOut, overnight: !!clockIn && !!clockOut && clockOut < clockIn, plan };
   }
