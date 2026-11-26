@@ -6,6 +6,10 @@
 <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
 <title>アプリ管理</title>
+<!-- 字体: BIZ UDPGothic（読めないときは下の font-family の次の字体に戻る） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
 <script>
 // 保存済みのテーマを描画前に反映（ちらつき防止）
 try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; var z = localStorage.getItem('hub-fontsize'); if (z === 's' || z === 'l' || z === 'xl') document.documentElement.dataset.fs = z; } catch (e) {}
@@ -69,7 +73,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     min-height: 100dvh;
     background: var(--bg);
     color: var(--text);
-    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: "BIZ UDPGothic", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
     line-height: 1.6;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
