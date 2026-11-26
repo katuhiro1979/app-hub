@@ -451,6 +451,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     .today[data-tab="today"] .today-sec:not([data-sec="todo"]), .today[data-tab="tomorrow"] .today-sec:not([data-sec="tomorrow"]), .today[data-tab="week"] .today-sec:not([data-sec="week"]), .today[data-tab="overdue"] .today-sec:not([data-sec="overdue"]) { visibility: hidden; pointer-events: none; }
     /* 4つの中身を同じ場所に重ねて置く（枠の高さは、いちばん高いタブにそろい、切り替えても動かない） */
     #todayBody { display: grid; }
+    #todayBody[hidden] { display: none; } /* 折りたたみ（hidden）が display: grid に負けないように */
     #todayBody > * { min-width: 0; }
     #todayTabs { grid-area: 1 / 1; }
     #todayWarn { grid-area: 2 / 1; }
