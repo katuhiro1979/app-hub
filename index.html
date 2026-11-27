@@ -258,6 +258,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .soji-lbl + .soji-row { border-top: 0; }
   .soji-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .soji-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .soji-tag + .soji-days { margin-left: auto; } /* 題名のない行（部屋名と同じ）でも、日数の札を右端にそろえる */
   .soji-days.strong { background: var(--danger); color: var(--on-danger); }
   .soji-days { flex: none; font-size: max(0.75rem, 11px); font-weight: 700; padding: 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); font-variant-numeric: tabular-nums; }
   .soji-none { margin: 2px 0 4px; font-size: 0.875rem; color: var(--muted); }
@@ -549,7 +550,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     <section id="shiftBox" class="today shift hidden" aria-label="出勤簿">
       <div class="today-bar">
         <button id="shiftHead" class="today-head" type="button" aria-expanded="true" aria-controls="shiftBody">
-          <span class="today-title">出勤簿</span><span class="today-date">今日の勤務</span>
+          <span class="today-title">出勤簿</span><span id="shiftSummary" class="today-date">今日の勤務</span>
           <svg class="today-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
       </div>
@@ -1632,6 +1633,8 @@ function renderShift() {
     };
     if (today) body.append(mkRow(' shift-today', s.day, today));
     else body.append(el('p', 'today-msg', '今日の記録はありません'));
+    // 折りたたんでも今日の勤務が分かるよう、見出しに「今日の勤務名と時刻」を出す
+    $('shiftSummary').textContent = today ? today.name + (shiftTimeText(today) ? '　' + shiftTimeText(today) : '') : '今日の記録なし';
     if (upcoming.length) {
       // 明日から 6 日先まで（今日と合わせて 1 週間）
       const wk = el('div', 'shift-week');
@@ -1702,7 +1705,11 @@ function renderSoji() {
   } else {
     const { today, overdue, tomorrow } = s.data;
     if (!today.length && !overdue.length && !tomorrow.length) { box.classList.add('hidden'); return; }
-    if (overdue.length) { sum.textContent = '期限切れ ' + overdue.length + ' 件'; sum.hidden = false; }
+    sum.classList.remove('warn');
+    if (overdue.length) {
+      sum.textContent = '期限切れ ' + overdue.length + ' 件'; sum.hidden = false;
+      if (overdue.some((r) => r.days >= SOJI_STRONG_DAYS)) sum.classList.add('warn'); // 30日以上の遅れがあれば、折りたたんでも赤で知らせる
+    }
     if (s.warn) {
       const w = el('p', 'today-msg err', '更新に失敗しました' + (s.loadedAt ? '（最終更新 ' + hhmm(s.loadedAt) + '）' : ''));
       w.id = 'sojiWarn'; w.setAttribute('role', 'alert');
@@ -1711,10 +1718,12 @@ function renderSoji() {
     const row = (r, days) => {
       const d = sojiLink(el('div', 'soji-row'), r.id);
       // ToDo と同じ「札 + 題名」。部屋名（member）を札にして、色は部屋の色を薄く使う
-      if (r.member && r.member !== r.title) {
+      // 部屋名と題名が同じときは、札だけ出す（同じ言葉を重ねない）。部屋名が空のときは、色の点と題名
+      if (r.member) {
         const tag = el('span', 'today-tag soji-tag', r.member);
         if (r.color) tag.style.setProperty('--tc', r.color);
-        d.append(tag, el('span', 'soji-t', r.title));
+        d.append(tag);
+        if (r.member !== r.title) d.append(el('span', 'soji-t', r.title));
       } else {
         const dot = el('span', 'soji-dot');
         if (r.color) dot.style.background = r.color;
