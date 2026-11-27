@@ -70,6 +70,8 @@
         row: {
           id: String(it.id == null ? '' : it.id),
           text: String(it.text == null ? '' : it.text).trim() || '（無題）',
+          // 新ToDoの「項目（任意）」。空白は詰めて、100字まで（新ToDo本体と同じ）
+          title: typeof it.title === 'string' ? it.title.replace(/\s+/g, ' ').trim().slice(0, 100) : '',
           date: it.date,
           time: isTime(it.time) ? it.time : '',
           until,

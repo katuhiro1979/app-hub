@@ -1458,7 +1458,11 @@ function renderToday(state) {
           el = document.createElement('span');
           el.className = 't';
         }
-        el.textContent = label;
+        if (r.title) {
+          // 新ToDoの「項目（title）」があるときは、項目だけを出す（内容は出さない。項目がなければ、今までどおり内容）
+          const tt = document.createElement('span'); tt.className = 'today-ttl'; tt.textContent = r.title;
+          el.append(tt);
+        } else el.textContent = label;
         if (flat.length > TODAY_TEXT_MAX) el.title = r.text;
         li.append(el);
         ul.append(li);
