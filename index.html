@@ -1417,7 +1417,8 @@ function renderToday(state) {
   } else {
     if (state.warn) body.append(todayWarnEl(state));
     const todoApp = apps.find((a) => /(^|\/)todo\.html(\?|#|$)/.test(a.url || '')) || apps.find((a) => a.name === 'ToDo');
-    const href = todoApp && /^https?:\/\//i.test(todoApp.url || '') ? todoApp.url : '';
+    // 今日画面の項目リンクは、新デザインの todo-new.html へ向ける（登録が todo.html でも同じ場所の todo-new.html。データは同じ）
+    const href = todoApp && /^https?:\/\//i.test(todoApp.url || '') ? todoApp.url.replace(/(^|\/)todo\.html(?=\?|#|$)/, '$1todo-new.html') : '';
     const section = (kind, title, allRows, withDate) => {
       if (!allRows.length) return;
       const limit = TODAY_LIST_MAX;
