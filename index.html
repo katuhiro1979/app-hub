@@ -406,14 +406,18 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
 
   /* ---- 左メニュー・今日のタブ（PC幅のみ。スマホ幅は表示しない） ---- */
   .side, #todayTabs, .pc-only { display: none; }
+  .menu-btn, .side-scrim, .side-close { display: none; }
   @media (min-width: 900px) {
     .wrap { max-width: 1260px; }
     #mainView { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
     .content { min-width: 0; }
-    .side {
-      display: flex; flex-direction: column; gap: 2px; position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto;
-      padding: 12px 10px; border-radius: 20px; background: #1e2a4a; color: #fff; box-shadow: 0 6px 18px rgba(20, 22, 28, .12);
-    }
+    .side { display: flex; position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+    /* MY APPS（カード一覧）は、PC幅では左メニューに任せて出さない */
+    .section-title, #searchWrap, #appList, #nohit { display: none !important; }
+  }
+  /* 左メニューの中身の見た目（PC幅と、幅 600〜899px の「メニュー」ボタンで開く重ね表示で共通） */
+  @media (min-width: 600px) {
+    .side { flex-direction: column; gap: 2px; padding: 12px 10px; border-radius: 20px; background: #1e2a4a; color: #fff; box-shadow: 0 6px 18px rgba(20, 22, 28, .12); }
     .side-item, .side-app {
       appearance: none; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px;
       background: none; color: inherit; font: inherit; font-size: 0.9375rem; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer;
@@ -437,12 +441,13 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     .side-search::placeholder { color: rgba(255, 255, 255, .6); }
     .side-search:focus-visible { outline: 3px solid #fff; outline-offset: 1px; }
     .side-nohit { margin: 6px 12px; font-size: max(0.8125rem, 11.5px); color: rgba(255, 255, 255, .7); }
-    /* MY APPS（カード一覧）は、PC幅では左メニューに任せて出さない */
-    .section-title, #searchWrap, #appList, #nohit { display: none !important; }
     .side-icon { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; font-size: max(0.8125rem, 11.5px); font-weight: 800; color: #fff; }
     .side-icon img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; display: block; }
     .side-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .side-plus { width: 28px; text-align: center; font-size: 1.25rem; line-height: 1; }
+  }
+  @media (min-width: 900px) {
+    .side-close { display: none; } /* 「閉じる」は、重ねて開く狭い幅だけ */
     .today, .card { box-shadow: 0 1px 3px rgba(20, 22, 28, .06), 0 6px 18px rgba(20, 22, 28, .05); }
     /* 今日の枠: タブで「今日」と「期限切れ」を切り替える（見出しはタブが兼ねる） */
     #todayTabs { display: flex; gap: 6px; margin: 4px 0 8px; border-bottom: 1px solid var(--border); }
@@ -464,6 +469,16 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     #todayBody .today-sec, #todayBody [data-empty] { grid-area: 3 / 1; }
     .pc-only { display: block; }
     .today[data-tab="today"] [data-empty]:not([data-empty="todo"]), .today[data-tab="tomorrow"] [data-empty]:not([data-empty="tomorrow"]), .today[data-tab="week"] [data-empty]:not([data-empty="week"]), .today[data-tab="overdue"] [data-empty]:not([data-empty="overdue"]) { visibility: hidden; pointer-events: none; }
+  }
+
+  /* 幅 600〜899px: 左メニューは「メニュー」ボタンで開く（重ねて表示）。スマホ幅（600px未満）はもともとメニューなし */
+  @media (min-width: 600px) and (max-width: 899.98px) {
+    .menu-btn { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); cursor: pointer; }
+    .menu-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+    .top .brand { gap: 10px; }
+    .side.open { display: flex; position: fixed; z-index: 60; left: 0; top: 0; bottom: 0; width: min(300px, 86vw); border-radius: 0 20px 20px 0; overflow-y: auto; padding-top: max(12px, env(safe-area-inset-top)); }
+    .side-scrim.open { display: block; position: fixed; z-index: 55; inset: 0; background: rgba(20, 22, 28, .45); }
+    .side-close { display: flex; }
   }
 
   /* ---- スマホ: 1列の横長行、ダイアログは下から出るシート ---- */
@@ -516,6 +531,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   <main id="mainView" class="hidden">
     <!-- 左メニュー（PC幅のみ表示） -->
     <nav id="sideNav" class="side" aria-label="メニュー">
+      <button id="sideClose" class="side-item side-close" type="button" aria-label="メニューを閉じる"><span class="side-plus" aria-hidden="true">×</span><span>閉じる</span></button>
       <button id="sideHome" class="side-item" type="button" aria-current="page">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
         <span>ホーム</span>
@@ -526,9 +542,11 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       <p id="sideNohit" class="side-nohit hidden">一致するアプリがありません。</p>
       <button id="sideAdd" class="side-item" type="button"><span class="side-plus" aria-hidden="true">＋</span><span>アプリを追加</span></button>
     </nav>
+    <div id="sideScrim" class="side-scrim" aria-hidden="true"></div>
     <div class="content">
     <header class="top">
       <div class="brand">
+        <button id="menuBtn" class="menu-btn" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="sideNav"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         <div class="logo" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
         </div>
@@ -760,6 +778,29 @@ updateFsBtn();
   const redo = () => { m.setAttribute('content', 'width=device-width, initial-scale=1.0001, viewport-fit=cover'); requestAnimationFrame(() => m.setAttribute('content', base)); };
   window.addEventListener('orientationchange', () => setTimeout(redo, 300));
 })();
+
+// ---- 幅 600〜899px: 「メニュー」ボタンで左メニューを重ねて開く ----
+(() => {
+  const side = $('sideNav'), btn = $('menuBtn'), scrim = $('sideScrim');
+  const mq = window.matchMedia('(min-width: 600px) and (max-width: 899.98px)');
+  const isOpen = () => side.classList.contains('open');
+  function setOpen(on, focusBack) {
+    side.classList.toggle('open', on); scrim.classList.toggle('open', on);
+    btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? 'メニューを閉じる' : 'メニューを開く');
+    if (on) { const f = side.querySelector('button, a, input:not(.hidden)'); if (f) f.focus(); }
+    else if (focusBack) btn.focus();
+  }
+  btn.onclick = () => setOpen(!isOpen(), true);
+  scrim.onclick = () => setOpen(false, true);
+  $('sideClose').onclick = () => setOpen(false, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) { e.preventDefault(); setOpen(false, true); } });
+  // ホーム・アプリを追加・アプリを開くを押したら閉じる（⋮ や検索欄では閉じない）
+  side.addEventListener('click', (e) => { if (isOpen() && e.target.closest('#sideHome, #sideAdd, .side-app')) setOpen(false, false); });
+  const onMq = () => { if (!mq.matches && isOpen()) setOpen(false, false); }; // 幅が変わって対象外になったら閉じる
+  if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+})();
+
 
 // ---- 注意書き: Safari で画面が狭く、左のメニューが隠れているとき（幅 600〜899px）----
 // スマホ（600px未満）はもともとメニューのない作り。ホーム画面のアプリには「Safariの画面」がないので、文言を変えて出す
@@ -1907,16 +1948,6 @@ document.addEventListener('visibilitychange', () => {
   const now = new Date();
   if (TodayLogic.todayISO(now) !== todayState.day || now - todayState.loadedAt >= 5 * 60 * 1000) loadToday();
 });
-
-// 画面に戻ったとき、開いたときと左メニューの出る幅（900px）をまたいで変わっていたら、画面を読み直す
-// （ほかのアプリで拡大・縮小して戻ると、止まっていた画面の幅が古いままになるため。書き込みはしない）
-{
-  const wideNow = () => window.innerWidth >= 900;
-  const wasWide = wideNow();
-  const recheck = () => { if (document.visibilityState !== 'hidden' && wideNow() !== wasWide) location.reload(); };
-  document.addEventListener('visibilitychange', recheck);
-  window.addEventListener('pageshow', recheck);
-}
 
 // 画面を開いたまま0時を越えたときも、日付が変わっていたら取り直す（タブを切り替えなくてよい）
 setInterval(() => {
