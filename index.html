@@ -549,7 +549,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
     </header>
 
     <div id="narrowNote" class="narrow-note" role="note" hidden>
-      <span>画面が狭いため、左のメニューを隠しています。Safariの画面を広げると出ます。</span>
+      <span id="narrowNoteText">画面が狭いため、左のメニューを隠しています。Safariの画面を広げると出ます。</span>
       <button id="narrowNoteClose" type="button" aria-label="この注意書きを閉じる">×</button>
     </div>
     <div class="today-tools"><button id="layoutBtn" class="btn-ghost" type="button">カードの並べ替え・表示</button></div>
@@ -762,16 +762,17 @@ updateFsBtn();
 })();
 
 // ---- 注意書き: Safari で画面が狭く、左のメニューが隠れているとき（幅 600〜899px）----
-// スマホ（600px未満）はもともとメニューのない作り。ホーム画面のアプリには「Safariの画面」がないので出さない
+// スマホ（600px未満）はもともとメニューのない作り。ホーム画面のアプリには「Safariの画面」がないので、文言を変えて出す
 (() => {
   const ua = navigator.userAgent || '';
   const isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Edg\/|OPR\/|Android/.test(ua);
   const standalone = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  const KEY = 'hub-narrow-note-closed';
+  const KEY = standalone ? 'hub-narrow-note-closed-app' : 'hub-narrow-note-closed'; // Safari とホーム画面のアプリで、閉じた記憶は別
+  if (standalone) $('narrowNoteText').textContent = '画面を拡大すると左のメニューが隠れます';
   let closed = false;
   try { closed = localStorage.getItem(KEY) === '1'; } catch (e) {}
   const mq = window.matchMedia('(min-width: 600px) and (max-width: 899.98px)');
-  const update = () => { $('narrowNote').hidden = !(isSafari && !standalone && !closed && mq.matches); };
+  const update = () => { $('narrowNote').hidden = !((isSafari || standalone) && !closed && mq.matches); };
   $('narrowNoteClose').onclick = () => { closed = true; try { localStorage.setItem(KEY, '1'); } catch (e) {} update(); }; // 保存できなくても、この画面では閉じる
   if (mq.addEventListener) mq.addEventListener('change', update); else if (mq.addListener) mq.addListener(update);
   update();
