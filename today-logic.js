@@ -202,7 +202,32 @@
     return out;
   }
 
-  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji, pickDevice, DEVICE_SOON_DAYS };
+  // 会員証マネージャーの保存データ { items: [{id,member,name,end}] } から、有効期限（end）が過ぎた会員証と、近い会員証（DEVICE_SOON_DAYS 日以内）を取り出す
+  function pickMember(value, today) {
+    const out = { total: 0, overdue: [], soon: [] };
+    if (value == null) return out;
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (e) { throw new Error('形式が違います'); }
+      if (value == null) return out;
+    }
+    if (typeof value !== 'object' || !Array.isArray(value.items)) throw new Error('形式が違います');
+    value.items.forEach((p) => {
+      if (!p || typeof p !== 'object' || Array.isArray(p) || !isDate(p.end)) return;
+      const one = (v) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '');
+      const member = one(p.member), name = one(p.name);
+      if (!member || !name) return; // 会員証アプリ本体も、持ち主と名前が空のものは捨てる
+      out.total++;
+      const left = Math.round(dayNum(p.end) - dayNum(today));
+      const row = { id: String(p.id == null ? '' : p.id), member, name, expiry: p.end };
+      if (left < 0) out.overdue.push(Object.assign(row, { over: -left }));
+      else if (left <= DEVICE_SOON_DAYS) out.soon.push(Object.assign(row, { left }));
+    });
+    out.overdue.sort((x, y) => y.over - x.over);
+    out.soon.sort((x, y) => x.left - y.left);
+    return out;
+  }
+
+  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji, pickDevice, pickMember, DEVICE_SOON_DAYS };
   root.TodayLogic = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

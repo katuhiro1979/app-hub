@@ -219,6 +219,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   #sojiBox { order: 3; }
   #backupBox { order: 4; }
   #deviceBox { order: 5; }
+  #memberBox { order: 6; }
   .today-side:not(:has(.today:not(.hidden))) { display: none; }
   /* 「今日」のカードの並べ替え・表示（保存があるときだけ .custom。ないときは従来の並び） */
   .narrow-note { display: flex; align-items: center; gap: 4px; margin: 0 0 10px; padding: 2px 4px 2px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: max(0.8125rem, 11.5px); }
@@ -232,9 +233,9 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .btn-ghost:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .today.user-hidden { display: none; }
   .today-row.custom .today-side { display: contents; }
-  .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox { order: var(--rank, 0); }
+  .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox, .today-row.custom #memberBox { order: var(--rank, 0); }
   @media (min-width: 900px) {
-    .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox { order: 0; grid-column: var(--col, 1); grid-row: var(--row, 1) / span var(--span, 1); }
+    .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox, .today-row.custom #memberBox { order: 0; grid-column: var(--col, 1); grid-row: var(--row, 1) / span var(--span, 1); }
     .today-row.custom[data-n="0"], .today-row.custom[data-n="1"] { grid-template-columns: minmax(0, 1fr); }
   }
   .layout-note { margin: 0 0 12px; font-size: max(0.8125rem, 11.5px); color: var(--muted); }
@@ -247,7 +248,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .layout-list .wsel { max-width: 100%; min-height: 32px; margin: 0; padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: max(0.75rem, 11px); }
   @media (min-width: 900px) {
     .today-row.custom.has-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .today-row.custom.has-wide #shiftBox, .today-row.custom.has-wide #todayBox, .today-row.custom.has-wide #sojiBox, .today-row.custom.has-wide #backupBox, .today-row.custom.has-wide #deviceBox { order: var(--rank, 0); }
+    .today-row.custom.has-wide #shiftBox, .today-row.custom.has-wide #todayBox, .today-row.custom.has-wide #sojiBox, .today-row.custom.has-wide #backupBox, .today-row.custom.has-wide #deviceBox, .today-row.custom.has-wide #memberBox { order: var(--rank, 0); }
   }
   .layout-list .nm { flex: 1; min-width: 0; font-weight: 600; }
   .layout-list .mv { flex: none; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 1rem; cursor: pointer; }
@@ -626,6 +627,18 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       <div id="deviceBody" aria-live="polite"></div>
       <p id="deviceStamp" class="today-stamp"></p>
     </section>
+
+    <!-- 会員証マネージャーが持つ有効期限が近い会員証を出すカード（読み取り専用） -->
+    <section id="memberBox" class="today device hidden" aria-label="会員証の有効期限">
+      <div class="today-bar">
+        <button id="memberHead" class="today-head" type="button" aria-expanded="true" aria-controls="memberBody">
+          <span class="today-title">会員証の有効期限</span><span id="memberSummary" class="today-summary" hidden></span>
+          <svg class="today-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div id="memberBody" aria-live="polite"></div>
+      <p id="memberStamp" class="today-stamp"></p>
+    </section>
     </div>
 
     <section id="todayBox" class="today hidden" aria-label="今日">
@@ -838,9 +851,9 @@ updateFsBtn();
 })();
 
 // ---- 「今日」のカードの並べ替え・表示（この端末だけの設定）----
-const CARD_KEYS = ['shift', 'todo', 'soji', 'backup', 'device'];
-const CARD_ID = { shift: 'shiftBox', todo: 'todayBox', soji: 'sojiBox', backup: 'backupBox', device: 'deviceBox' };
-const CARD_NAME = { shift: '出勤簿', todo: 'ToDo（今日）', soji: '掃除', backup: 'バックアップ', device: '端末のチャージ期限' };
+const CARD_KEYS = ['shift', 'todo', 'soji', 'backup', 'device', 'member'];
+const CARD_ID = { shift: 'shiftBox', todo: 'todayBox', soji: 'sojiBox', backup: 'backupBox', device: 'deviceBox', member: 'memberBox' };
+const CARD_NAME = { shift: '出勤簿', todo: 'ToDo（今日）', soji: '掃除', backup: 'バックアップ', device: '端末のチャージ期限', member: '会員証の有効期限' };
 const CARD_LS = 'hub-card-layout';
 function loadCardLayout() {
   try {
@@ -856,7 +869,7 @@ let cardLayout = loadCardLayout();
 function saveCardLayout() {
   try { if (cardLayout) localStorage.setItem(CARD_LS, JSON.stringify(cardLayout)); else localStorage.removeItem(CARD_LS); } catch (e) {} // 保存できなくても表示は変える
 }
-const defaultCardOrder = () => (window.matchMedia('(min-width: 900px)').matches ? ['todo', 'shift', 'soji', 'backup', 'device'] : ['shift', 'todo', 'soji', 'backup', 'device']);
+const defaultCardOrder = () => (window.matchMedia('(min-width: 900px)').matches ? ['todo', 'shift', 'soji', 'backup', 'device', 'member'] : ['shift', 'todo', 'soji', 'backup', 'device', 'member']);
 function applyCardLayout() {
   const row = document.querySelector('.today-row');
   CARD_KEYS.forEach((k) => { const el = $(CARD_ID[k]); el.classList.remove('user-hidden'); ['--rank', '--col', '--row', '--span'].forEach((v) => el.style.removeProperty(v)); });
@@ -1459,6 +1472,7 @@ async function loadApps() {
   if (sojiState.loadedAt) renderSoji();
   if (backupState.loadedAt) renderBackup();
   if (deviceState.loadedAt) renderDevice();
+  if (memberState.loadedAt) renderMember();
 }
 // 他端末の変更通知は、短い間にまとまって届くことがあるので間引く
 let reloadTimer = null;
@@ -1645,6 +1659,7 @@ async function loadToday() {
   loadSoji(); // 掃除のカードも同じ
   loadBackupCard(); // バックアップのカードも同じ
   loadDevice(); // 端末のチャージ期限のカードも同じ
+  loadMember(); // 会員証の有効期限のカードも同じ
   const my = ++todaySeq;
   setTodayBusy(true);
   if (!todayState.loadedAt) renderToday({ todo: { status: 'loading' }, loadedAt: null, day: '', warn: false }); // 初回だけ「読み込み中」を出す
@@ -2015,6 +2030,79 @@ function setDeviceCollapsed(c, save) {
 $('deviceHead').onclick = () => setDeviceCollapsed($('deviceHead').getAttribute('aria-expanded') === 'true', true);
 try { if (localStorage.getItem(DEVICE_COLLAPSE_KEY) === '1') setDeviceCollapsed(true, false); } catch (e) {}
 
+// ---- 会員証の有効期限のカード（読み取り専用。app_kv は select だけ）----
+// 会員証マネージャーが持つ { items: [...] } を読み、有効期限が過ぎた会員証と、DEVICE_SOON_DAYS 日以内の会員証を出す
+let memberState = { status: 'loading', data: null, loadedAt: null, warn: false };
+let memberSeq = 0;
+function renderMember() {
+  const box = $('memberBox'), body = $('memberBody'), s = memberState, sum = $('memberSummary');
+  body.replaceChildren(); sum.hidden = true; sum.classList.remove('warn');
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  if (s.status === 'loading') { box.classList.add('hidden'); return; }
+  if (s.status === 'error') {
+    body.append(el('p', 'today-msg err', s.message));
+    const b = el('button', 'btn', '再読み込み'); b.id = 'memberRetry'; b.type = 'button'; b.onclick = () => loadMember();
+    body.append(b);
+  } else {
+    const { total, overdue, soon } = s.data;
+    if (!total) { box.classList.add('hidden'); return; } // 会員証が1件もなければ、カードは出さない
+    if (s.warn) { const w = el('p', 'today-msg err', '更新に失敗しました' + (s.loadedAt ? '（最終更新 ' + hhmm(s.loadedAt) + '）' : '')); w.id = 'memberWarn'; w.setAttribute('role', 'alert'); body.append(w); }
+    const app = apps.find((a) => /(^|\/)membership-manager\.html(\?|#|$)/.test(a.url || ''));
+    const row = (r, badge) => {
+      let d = el('div', 'soji-row dev-row');
+      if (app && /^https?:\/\//i.test(app.url)) {
+        d = el('a', 'soji-row dev-row soji-link');
+        d.href = app.url; d.target = '_blank'; d.rel = 'noopener noreferrer';
+      }
+      d.append(el('span', 'soji-t', r.member + '　' + r.name), el('span', 'dev-exp', mdText(r.expiry) + 'まで'), badge);
+      return d;
+    };
+    if (!overdue.length && !soon.length) body.append(el('p', 'soji-none', '期限が近い会員証はありません'));
+    if (overdue.length) {
+      body.append(el('div', 'soji-lbl', '期限切れ'));
+      overdue.forEach((r) => body.append(row(r, el('span', 'soji-days strong', r.over + '日過ぎ'))));
+    }
+    if (soon.length) {
+      body.append(el('div', 'soji-lbl', 'もうすぐ（' + TodayLogic.DEVICE_SOON_DAYS + '日以内）'));
+      soon.forEach((r) => body.append(row(r, el('span', 'dev-left' + (r.left <= DEVICE_NEAR_DAYS ? ' near' : ''), r.left === 0 ? '今日まで' : 'あと' + r.left + '日'))));
+    }
+    const parts = [];
+    if (overdue.length) parts.push('期限切れ ' + overdue.length);
+    if (soon.length) parts.push(TodayLogic.DEVICE_SOON_DAYS + '日以内 ' + soon.length);
+    sum.textContent = parts.length ? parts.join('・') : '近い会員証なし';
+    sum.hidden = false;
+    sum.classList.toggle('warn', overdue.length > 0 || soon.some((r) => r.left <= DEVICE_NEAR_DAYS)); // 折りたたんでも赤で知らせる
+  }
+  $('memberStamp').textContent = s.loadedAt ? '最終更新 ' + hhmm(s.loadedAt) : '';
+  box.classList.remove('hidden');
+}
+async function loadMember() {
+  const my = ++memberSeq;
+  const day = TodayLogic.todayISO(new Date());
+  let next;
+  try {
+    const { data, error } = await sb.from('app_kv').select('value').eq('app_name', '会員証マネージャー').eq('key', 'data-v1').maybeSingle();
+    if (my !== memberSeq) return;
+    if (error) throw new Error('read');
+    next = { status: 'ok', data: TodayLogic.pickMember(data ? data.value : null, day), loadedAt: new Date(), day, warn: false };
+  } catch (e) {
+    if (my !== memberSeq) return;
+    if (memberState.status === 'ok' && memberState.day === day) next = Object.assign({}, memberState, { warn: true });
+    else next = { status: 'error', message: (e && e.message === '形式が違います' ? '形式が違います' : '読み込めませんでした') + '（会員証）', loadedAt: new Date(), warn: false };
+  }
+  memberState = next;
+  renderMember();
+}
+const MEMBER_COLLAPSE_KEY = 'hub-member-collapsed';
+function setMemberCollapsed(c, save) {
+  $('memberHead').setAttribute('aria-expanded', c ? 'false' : 'true');
+  $('memberBody').hidden = c;
+  $('memberStamp').hidden = c;
+  if (save) { try { localStorage.setItem(MEMBER_COLLAPSE_KEY, c ? '1' : '0'); } catch (e) {} }
+}
+$('memberHead').onclick = () => setMemberCollapsed($('memberHead').getAttribute('aria-expanded') === 'true', true);
+try { if (localStorage.getItem(MEMBER_COLLAPSE_KEY) === '1') setMemberCollapsed(true, false); } catch (e) {}
+
 const SOJI_COLLAPSE_KEY = 'hub-soji-collapsed';
 function setSojiCollapsed(c, save) {
   $('sojiHead').setAttribute('aria-expanded', c ? 'false' : 'true');
@@ -2059,7 +2147,7 @@ function applySession(session) {
   $('mainView').classList.toggle('hidden', !loggedIn);
   if (channel) { sb.removeChannel(channel); channel = null; }
   closeMenu(false);
-  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = todayOpen.tomorrow = todayOpen.week = false; todayTab = null; shiftSeq++; shiftState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('shiftBox').classList.add('hidden'); sojiSeq++; sojiState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('sojiBox').classList.add('hidden'); backupSeq++; backupState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('backupBox').classList.add('hidden'); deviceSeq++; deviceState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('deviceBox').classList.add('hidden'); $('shiftBody').replaceChildren(); $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
+  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = todayOpen.tomorrow = todayOpen.week = false; todayTab = null; shiftSeq++; shiftState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('shiftBox').classList.add('hidden'); sojiSeq++; sojiState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('sojiBox').classList.add('hidden'); backupSeq++; backupState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('backupBox').classList.add('hidden'); deviceSeq++; deviceState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('deviceBox').classList.add('hidden'); memberSeq++; memberState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('memberBox').classList.add('hidden'); $('shiftBody').replaceChildren(); $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
   if (loggedIn) {
     userEmail = session.user.email;
     apps = [];
