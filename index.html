@@ -220,6 +220,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   #backupBox { order: 4; }
   #deviceBox { order: 5; }
   #memberBox { order: 6; }
+  #medicalBox { order: 7; }
   .today-side:not(:has(.today:not(.hidden))) { display: none; }
   /* 「今日」のカードの並べ替え・表示（保存があるときだけ .custom。ないときは従来の並び） */
   .narrow-note { display: flex; align-items: center; gap: 4px; margin: 0 0 10px; padding: 2px 4px 2px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: max(0.8125rem, 11.5px); }
@@ -233,9 +234,9 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .btn-ghost:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .today.user-hidden { display: none; }
   .today-row.custom .today-side { display: contents; }
-  .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox, .today-row.custom #memberBox { order: var(--rank, 0); }
+  .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox, .today-row.custom #memberBox, .today-row.custom #medicalBox { order: var(--rank, 0); }
   @media (min-width: 900px) {
-    .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox, .today-row.custom #memberBox { order: 0; grid-column: var(--col, 1); grid-row: var(--row, 1) / span var(--span, 1); }
+    .today-row.custom #shiftBox, .today-row.custom #todayBox, .today-row.custom #sojiBox, .today-row.custom #backupBox, .today-row.custom #deviceBox, .today-row.custom #memberBox, .today-row.custom #medicalBox { order: 0; grid-column: var(--col, 1); grid-row: var(--row, 1) / span var(--span, 1); }
     .today-row.custom[data-n="0"], .today-row.custom[data-n="1"] { grid-template-columns: minmax(0, 1fr); }
   }
   .layout-note { margin: 0 0 12px; font-size: max(0.8125rem, 11.5px); color: var(--muted); }
@@ -248,7 +249,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .layout-list .wsel { max-width: 100%; min-height: 32px; margin: 0; padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: max(0.75rem, 11px); }
   @media (min-width: 900px) {
     .today-row.custom.has-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .today-row.custom.has-wide #shiftBox, .today-row.custom.has-wide #todayBox, .today-row.custom.has-wide #sojiBox, .today-row.custom.has-wide #backupBox, .today-row.custom.has-wide #deviceBox, .today-row.custom.has-wide #memberBox { order: var(--rank, 0); }
+    .today-row.custom.has-wide #shiftBox, .today-row.custom.has-wide #todayBox, .today-row.custom.has-wide #sojiBox, .today-row.custom.has-wide #backupBox, .today-row.custom.has-wide #deviceBox, .today-row.custom.has-wide #memberBox, .today-row.custom.has-wide #medicalBox { order: var(--rank, 0); }
   }
   .layout-list .nm { flex: 1; min-width: 0; font-weight: 600; }
   .layout-list .mv { flex: none; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 1rem; cursor: pointer; }
@@ -268,6 +269,7 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   .soji-tag + .soji-days { margin-left: auto; } /* 題名のない行（部屋名と同じ）でも、日数の札を右端にそろえる */
   .soji-days.strong { background: var(--danger); color: var(--on-danger); }
   .soji-days { flex: none; font-size: max(0.75rem, 11px); font-weight: 700; padding: 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); font-variant-numeric: tabular-nums; }
+  .med-sub { display: block; font-size: max(0.75rem, 11px); font-weight: 400; color: var(--muted); }
   .dev-row { cursor: default; }
   a.dev-row { cursor: pointer; }
   .dev-exp { flex: none; font-size: max(0.75rem, 11px); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -639,6 +641,18 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       <div id="memberBody" aria-live="polite"></div>
       <p id="memberStamp" class="today-stamp"></p>
     </section>
+
+    <!-- 医療管理が持つ近い予約と次回の健診を出すカード（読み取り専用。病名・薬は出さない） -->
+    <section id="medicalBox" class="today device hidden" aria-label="通院・健診">
+      <div class="today-bar">
+        <button id="medicalHead" class="today-head" type="button" aria-expanded="true" aria-controls="medicalBody">
+          <span class="today-title">通院・健診</span><span id="medicalSummary" class="today-summary" hidden></span>
+          <svg class="today-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div id="medicalBody" aria-live="polite"></div>
+      <p id="medicalStamp" class="today-stamp"></p>
+    </section>
     </div>
 
     <section id="todayBox" class="today hidden" aria-label="今日">
@@ -851,9 +865,9 @@ updateFsBtn();
 })();
 
 // ---- 「今日」のカードの並べ替え・表示（この端末だけの設定）----
-const CARD_KEYS = ['shift', 'todo', 'soji', 'backup', 'device', 'member'];
-const CARD_ID = { shift: 'shiftBox', todo: 'todayBox', soji: 'sojiBox', backup: 'backupBox', device: 'deviceBox', member: 'memberBox' };
-const CARD_NAME = { shift: '出勤簿', todo: 'ToDo（今日）', soji: '掃除', backup: 'バックアップ', device: '端末のチャージ期限', member: '会員証の有効期限' };
+const CARD_KEYS = ['shift', 'todo', 'soji', 'backup', 'device', 'member', 'medical'];
+const CARD_ID = { shift: 'shiftBox', todo: 'todayBox', soji: 'sojiBox', backup: 'backupBox', device: 'deviceBox', member: 'memberBox', medical: 'medicalBox' };
+const CARD_NAME = { shift: '出勤簿', todo: 'ToDo（今日）', soji: '掃除', backup: 'バックアップ', device: '端末のチャージ期限', member: '会員証の有効期限', medical: '通院・健診' };
 const CARD_LS = 'hub-card-layout';
 function loadCardLayout() {
   try {
@@ -869,7 +883,7 @@ let cardLayout = loadCardLayout();
 function saveCardLayout() {
   try { if (cardLayout) localStorage.setItem(CARD_LS, JSON.stringify(cardLayout)); else localStorage.removeItem(CARD_LS); } catch (e) {} // 保存できなくても表示は変える
 }
-const defaultCardOrder = () => (window.matchMedia('(min-width: 900px)').matches ? ['todo', 'shift', 'soji', 'backup', 'device', 'member'] : ['shift', 'todo', 'soji', 'backup', 'device', 'member']);
+const defaultCardOrder = () => (window.matchMedia('(min-width: 900px)').matches ? ['todo', 'shift', 'soji', 'backup', 'device', 'member', 'medical'] : ['shift', 'todo', 'soji', 'backup', 'device', 'member', 'medical']);
 function applyCardLayout() {
   const row = document.querySelector('.today-row');
   CARD_KEYS.forEach((k) => { const el = $(CARD_ID[k]); el.classList.remove('user-hidden'); ['--rank', '--col', '--row', '--span'].forEach((v) => el.style.removeProperty(v)); });
@@ -1473,6 +1487,7 @@ async function loadApps() {
   if (backupState.loadedAt) renderBackup();
   if (deviceState.loadedAt) renderDevice();
   if (memberState.loadedAt) renderMember();
+  if (medicalState.loadedAt) renderMedical();
 }
 // 他端末の変更通知は、短い間にまとまって届くことがあるので間引く
 let reloadTimer = null;
@@ -1660,6 +1675,7 @@ async function loadToday() {
   loadBackupCard(); // バックアップのカードも同じ
   loadDevice(); // 端末のチャージ期限のカードも同じ
   loadMember(); // 会員証の有効期限のカードも同じ
+  loadMedical(); // 通院・健診のカードも同じ
   const my = ++todaySeq;
   setTodayBusy(true);
   if (!todayState.loadedAt) renderToday({ todo: { status: 'loading' }, loadedAt: null, day: '', warn: false }); // 初回だけ「読み込み中」を出す
@@ -2103,6 +2119,91 @@ function setMemberCollapsed(c, save) {
 $('memberHead').onclick = () => setMemberCollapsed($('memberHead').getAttribute('aria-expanded') === 'true', true);
 try { if (localStorage.getItem(MEMBER_COLLAPSE_KEY) === '1') setMemberCollapsed(true, false); } catch (e) {}
 
+// ---- 通院・健診のカード（読み取り専用。app_kv は select だけ）----
+// 医療管理アプリの { data: {...} } から、近い予約（MEDICAL_APPT_DAYS 日先まで）と次回の健診を出す。病名・診断・薬は読まない
+let medicalState = { status: 'loading', data: null, loadedAt: null, warn: false };
+let medicalSeq = 0;
+const nowLocalISO = () => { const n = new Date(), p2 = (v) => String(v).padStart(2, '0'); return TodayLogic.todayISO(n) + 'T' + p2(n.getHours()) + ':' + p2(n.getMinutes()); };
+function renderMedical() {
+  const box = $('medicalBox'), body = $('medicalBody'), s = medicalState, sum = $('medicalSummary');
+  body.replaceChildren(); sum.hidden = true; sum.classList.remove('warn');
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  if (s.status === 'loading') { box.classList.add('hidden'); return; }
+  if (s.status === 'error') {
+    body.append(el('p', 'today-msg err', s.message));
+    const b = el('button', 'btn', '再読み込み'); b.id = 'medicalRetry'; b.type = 'button'; b.onclick = () => loadMedical();
+    body.append(b);
+  } else {
+    const { total, appts, checkup } = s.data;
+    if (!total) { box.classList.add('hidden'); return; } // 予約も健診の予定もなければ、カードは出さない
+    if (s.warn) { const w = el('p', 'today-msg err', '更新に失敗しました' + (s.loadedAt ? '（最終更新 ' + hhmm(s.loadedAt) + '）' : '')); w.id = 'medicalWarn'; w.setAttribute('role', 'alert'); body.append(w); }
+    const app = apps.find((a) => /(^|\/)medical-manager\.html(\?|#|$)/.test(a.url || ''));
+    const row = (title, sub, when, badge) => {
+      let d = el('div', 'soji-row dev-row');
+      if (app && /^https?:\/\//i.test(app.url)) {
+        d = el('a', 'soji-row dev-row soji-link');
+        d.href = app.url; d.target = '_blank'; d.rel = 'noopener noreferrer';
+      }
+      const t = el('span', 'soji-t', title);
+      if (sub) t.append(el('span', 'med-sub', sub));
+      d.append(t, el('span', 'dev-exp', when), badge);
+      return d;
+    };
+    if (!appts.length && !checkup) body.append(el('p', 'soji-none', '近い予定はありません'));
+    if (appts.length) {
+      body.append(el('div', 'soji-lbl', 'これからの予約（' + TodayLogic.MEDICAL_APPT_DAYS + '日以内）'));
+      appts.forEach((a) => {
+        const title = [a.hospital, a.dept].filter(Boolean).join('　') || '予約';
+        const dt = Number(a.at.slice(5, 7)) + '月' + Number(a.at.slice(8, 10)) + '日 ' + a.at.slice(11);
+        const lab = a.left === 0 ? '今日' : a.left === 1 ? '明日' : 'あと' + a.left + '日';
+        body.append(row(title, a.purpose ? '目的：' + a.purpose : '', dt, el('span', 'dev-left' + (a.left <= 1 ? ' near' : ''), lab)));
+      });
+    }
+    if (checkup) {
+      body.append(el('div', 'soji-lbl', '次回の健診'));
+      const over = checkup.left < 0;
+      body.append(row(checkup.name, '', mdText(checkup.next) + (over ? 'の予定' : ''),
+        over ? el('span', 'soji-days strong', -checkup.left + '日過ぎ') : el('span', 'dev-left' + (checkup.left <= DEVICE_NEAR_DAYS ? ' near' : ''), checkup.left === 0 ? '今日' : 'あと' + checkup.left + '日')));
+    }
+    const todayN = appts.filter((a) => a.left === 0).length, laterN = appts.length - todayN;
+    const parts = [];
+    if (todayN) parts.push('今日 ' + todayN);
+    if (laterN) parts.push(TodayLogic.MEDICAL_APPT_DAYS + '日以内 ' + laterN);
+    if (checkup) parts.push('健診 1');
+    sum.textContent = parts.length ? parts.join('・') : '近い予定なし';
+    sum.hidden = false;
+    sum.classList.toggle('warn', todayN > 0 || !!(checkup && checkup.left <= DEVICE_NEAR_DAYS)); // 折りたたんでも赤で知らせる
+  }
+  $('medicalStamp').textContent = s.loadedAt ? '最終更新 ' + hhmm(s.loadedAt) : '';
+  box.classList.remove('hidden');
+}
+async function loadMedical() {
+  const my = ++medicalSeq;
+  const day = TodayLogic.todayISO(new Date());
+  let next;
+  try {
+    const { data, error } = await sb.from('app_kv').select('value').eq('app_name', '医療管理').eq('key', 'data-v1').maybeSingle();
+    if (my !== medicalSeq) return;
+    if (error) throw new Error('read');
+    next = { status: 'ok', data: TodayLogic.pickMedical(data ? data.value : null, day, nowLocalISO()), loadedAt: new Date(), day, warn: false };
+  } catch (e) {
+    if (my !== medicalSeq) return;
+    if (medicalState.status === 'ok' && medicalState.day === day) next = Object.assign({}, medicalState, { warn: true });
+    else next = { status: 'error', message: (e && e.message === '形式が違います' ? '形式が違います' : '読み込めませんでした') + '（通院）', loadedAt: new Date(), warn: false };
+  }
+  medicalState = next;
+  renderMedical();
+}
+const MEDICAL_COLLAPSE_KEY = 'hub-medical-collapsed';
+function setMedicalCollapsed(c, save) {
+  $('medicalHead').setAttribute('aria-expanded', c ? 'false' : 'true');
+  $('medicalBody').hidden = c;
+  $('medicalStamp').hidden = c;
+  if (save) { try { localStorage.setItem(MEDICAL_COLLAPSE_KEY, c ? '1' : '0'); } catch (e) {} }
+}
+$('medicalHead').onclick = () => setMedicalCollapsed($('medicalHead').getAttribute('aria-expanded') === 'true', true);
+try { if (localStorage.getItem(MEDICAL_COLLAPSE_KEY) === '1') setMedicalCollapsed(true, false); } catch (e) {}
+
 const SOJI_COLLAPSE_KEY = 'hub-soji-collapsed';
 function setSojiCollapsed(c, save) {
   $('sojiHead').setAttribute('aria-expanded', c ? 'false' : 'true');
@@ -2147,7 +2248,7 @@ function applySession(session) {
   $('mainView').classList.toggle('hidden', !loggedIn);
   if (channel) { sb.removeChannel(channel); channel = null; }
   closeMenu(false);
-  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = todayOpen.tomorrow = todayOpen.week = false; todayTab = null; shiftSeq++; shiftState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('shiftBox').classList.add('hidden'); sojiSeq++; sojiState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('sojiBox').classList.add('hidden'); backupSeq++; backupState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('backupBox').classList.add('hidden'); deviceSeq++; deviceState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('deviceBox').classList.add('hidden'); memberSeq++; memberState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('memberBox').classList.add('hidden'); $('shiftBody').replaceChildren(); $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
+  if (!loggedIn) { todaySeq++; setTodayBusy(false); todayOpen.overdue = todayOpen.todo = todayOpen.tomorrow = todayOpen.week = false; todayTab = null; shiftSeq++; shiftState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('shiftBox').classList.add('hidden'); sojiSeq++; sojiState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('sojiBox').classList.add('hidden'); backupSeq++; backupState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('backupBox').classList.add('hidden'); deviceSeq++; deviceState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('deviceBox').classList.add('hidden'); memberSeq++; memberState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('memberBox').classList.add('hidden'); medicalSeq++; medicalState = { status: 'loading', data: null, loadedAt: null, warn: false }; $('medicalBox').classList.add('hidden'); $('shiftBody').replaceChildren(); $('todayBox').classList.add('hidden'); $('todayBody').replaceChildren(); }
   if (loggedIn) {
     userEmail = session.user.email;
     apps = [];

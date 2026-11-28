@@ -227,7 +227,44 @@
     return out;
   }
 
-  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji, pickDevice, pickMember, DEVICE_SOON_DAYS };
+  // 医療管理の保存データ { data: { appointments, checkups, hospitals } } から、近い予約（今から MEDICAL_APPT_DAYS 日先まで）と、
+  // 次回の健診（いちばん新しい健診の次回予定日が DEVICE_SOON_DAYS 日以内、または過ぎたもの）を取り出す。医療管理アプリのホームと同じ見方
+  // 病名・診断・薬は読まない。now は端末の今（YYYY-MM-DDTHH:MM）
+  const MEDICAL_APPT_DAYS = 7;
+  function pickMedical(value, today, now) {
+    const out = { total: 0, appts: [], checkup: null };
+    if (value == null) return out;
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (e) { throw new Error('形式が違います'); }
+      if (value == null) return out;
+    }
+    if (typeof value !== 'object' || !value.data || typeof value.data !== 'object') throw new Error('形式が違います');
+    const d = value.data;
+    const list = (v) => (Array.isArray(v) ? v : []).filter((x) => x && typeof x === 'object' && !Array.isArray(x) && !x.deleted);
+    const one = (v) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '');
+    const hosp = {};
+    list(d.hospitals).forEach((h) => { hosp[String(h.id)] = one(h.name); });
+    const isDT = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/.test(s) && isDate(s.slice(0, 10));
+    list(d.appointments).forEach((a) => {
+      if (!isDT(a.at) || a.at < now) return; // 過ぎた予約は出さない
+      out.total++;
+      const day = a.at.slice(0, 10);
+      const left = Math.round(dayNum(day) - dayNum(today));
+      if (left > MEDICAL_APPT_DAYS) return;
+      out.appts.push({ id: String(a.id == null ? '' : a.id), at: a.at, left, hospital: hosp[String(a.hospitalId)] || '', dept: one(a.dept), purpose: one(a.purpose) });
+    });
+    out.appts.sort((x, y) => cmp(x.at, y.at));
+    const cs = list(d.checkups).filter((c) => isDate(c.date)).sort((x, y) => cmp(y.date, x.date));
+    const latest = cs.filter((c) => isDate(c.next))[0]; // 次回予定のある、いちばん新しい健診
+    if (latest) {
+      out.total++;
+      const left = Math.round(dayNum(latest.next) - dayNum(today));
+      if (left <= DEVICE_SOON_DAYS) out.checkup = { id: String(latest.id == null ? '' : latest.id), name: one(latest.kind) || '健康診断', next: latest.next, left };
+    }
+    return out;
+  }
+
+  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji, pickDevice, pickMember, pickMedical, DEVICE_SOON_DAYS, MEDICAL_APPT_DAYS };
   root.TodayLogic = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
