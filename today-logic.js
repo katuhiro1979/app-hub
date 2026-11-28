@@ -172,7 +172,37 @@
     return out;
   }
 
-  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji };
+  // iPad管理（端末管理）の保存データ { devices: [{id,name,kind,status,charges:[{date,expire,...}]}] } から、
+  // ポケットWi-Fiのチャージ有効期限が過ぎた端末と、近い端末（DEVICE_SOON_DAYS 日以内）を取り出す
+  // 期限は、チャージ履歴のうち いちばん先の有効期限。売却済みと、期限の登録がない端末は対象外
+  const DEVICE_SOON_DAYS = 30;
+  function pickDevice(value, today) {
+    const out = { total: 0, overdue: [], soon: [] };
+    if (value == null) return out;
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (e) { throw new Error('形式が違います'); }
+      if (value == null) return out;
+    }
+    if (typeof value !== 'object' || !Array.isArray(value.devices)) throw new Error('形式が違います');
+    value.devices.forEach((d) => {
+      if (!d || typeof d !== 'object' || Array.isArray(d) || d.kind !== 'ポケットWi-Fi' || d.status === '売却済み') return;
+      const name = typeof d.name === 'string' ? d.name.replace(/\s+/g, ' ').trim() : '';
+      if (!name) return;
+      let expiry = '';
+      (Array.isArray(d.charges) ? d.charges : []).forEach((c) => { if (c && isDate(c.expire) && c.expire > expiry) expiry = c.expire; });
+      if (!expiry) return;
+      out.total++;
+      const left = Math.round(dayNum(expiry) - dayNum(today));
+      const row = { id: String(d.id == null ? '' : d.id), name, expiry };
+      if (left < 0) out.overdue.push(Object.assign(row, { over: -left }));
+      else if (left <= DEVICE_SOON_DAYS) out.soon.push(Object.assign(row, { left }));
+    });
+    out.overdue.sort((x, y) => y.over - x.over); // 過ぎた日数が多い順
+    out.soon.sort((x, y) => x.left - y.left); // 残りが少ない順
+    return out;
+  }
+
+  const api = { isDate, todayISO, formatHeading, pickTodo, nextDayISO, pickShift, pickSoji, pickDevice, DEVICE_SOON_DAYS };
   root.TodayLogic = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
