@@ -1908,6 +1908,16 @@ document.addEventListener('visibilitychange', () => {
   if (TodayLogic.todayISO(now) !== todayState.day || now - todayState.loadedAt >= 5 * 60 * 1000) loadToday();
 });
 
+// 画面に戻ったとき、開いたときと左メニューの出る幅（900px）をまたいで変わっていたら、画面を読み直す
+// （ほかのアプリで拡大・縮小して戻ると、止まっていた画面の幅が古いままになるため。書き込みはしない）
+{
+  const wideNow = () => window.innerWidth >= 900;
+  const wasWide = wideNow();
+  const recheck = () => { if (document.visibilityState !== 'hidden' && wideNow() !== wasWide) location.reload(); };
+  document.addEventListener('visibilitychange', recheck);
+  window.addEventListener('pageshow', recheck);
+}
+
 // 画面を開いたまま0時を越えたときも、日付が変わっていたら取り直す（タブを切り替えなくてよい）
 setInterval(() => {
   if (document.visibilityState === 'hidden' || $('todayBox').classList.contains('hidden') || !todayState.loadedAt) return;
