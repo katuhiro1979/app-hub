@@ -220,6 +220,11 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
   #backupBox { order: 4; }
   .today-side:not(:has(.today:not(.hidden))) { display: none; }
   /* 「今日」のカードの並べ替え・表示（保存があるときだけ .custom。ないときは従来の並び） */
+  .narrow-note { display: flex; align-items: center; gap: 4px; margin: 0 0 10px; padding: 2px 4px 2px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: max(0.8125rem, 11.5px); }
+  .narrow-note[hidden] { display: none; }
+  .narrow-note span { flex: 1; min-width: 0; }
+  .narrow-note button { flex: none; width: 44px; height: 44px; border: 0; background: none; color: inherit; font-size: 1.25rem; line-height: 1; cursor: pointer; border-radius: 50%; }
+  .narrow-note button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); }
   .today-tools { display: flex; justify-content: flex-end; margin: -8px 0 6px; }
   .btn-ghost { min-height: 44px; padding: 0 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: max(0.8125rem, 11.5px); font-weight: 600; cursor: pointer; border-radius: 10px; }
   .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
@@ -543,6 +548,10 @@ try { var t = localStorage.getItem('hub-theme'); if (t === 'light' || t === 'dar
       </div>
     </header>
 
+    <div id="narrowNote" class="narrow-note" role="note" hidden>
+      <span>画面が狭いため、左のメニューを隠しています。Safariの画面を広げると出ます。</span>
+      <button id="narrowNoteClose" type="button" aria-label="この注意書きを閉じる">×</button>
+    </div>
     <div class="today-tools"><button id="layoutBtn" class="btn-ghost" type="button">カードの並べ替え・表示</button></div>
     <div class="today-row">
     <!-- 出勤簿（新）の今日・明日の勤務。ToDo の枠とは別のカード（読み取り専用） -->
@@ -750,6 +759,22 @@ updateFsBtn();
   const base = m.getAttribute('content');
   const redo = () => { m.setAttribute('content', 'width=device-width, initial-scale=1.0001, viewport-fit=cover'); requestAnimationFrame(() => m.setAttribute('content', base)); };
   window.addEventListener('orientationchange', () => setTimeout(redo, 300));
+})();
+
+// ---- 注意書き: Safari で画面が狭く、左のメニューが隠れているとき（幅 600〜899px）----
+// スマホ（600px未満）はもともとメニューのない作り。ホーム画面のアプリには「Safariの画面」がないので出さない
+(() => {
+  const ua = navigator.userAgent || '';
+  const isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Edg\/|OPR\/|Android/.test(ua);
+  const standalone = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  const KEY = 'hub-narrow-note-closed';
+  let closed = false;
+  try { closed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  const mq = window.matchMedia('(min-width: 600px) and (max-width: 899.98px)');
+  const update = () => { $('narrowNote').hidden = !(isSafari && !standalone && !closed && mq.matches); };
+  $('narrowNoteClose').onclick = () => { closed = true; try { localStorage.setItem(KEY, '1'); } catch (e) {} update(); }; // 保存できなくても、この画面では閉じる
+  if (mq.addEventListener) mq.addEventListener('change', update); else if (mq.addListener) mq.addListener(update);
+  update();
 })();
 
 // ---- 「今日」のカードの並べ替え・表示（この端末だけの設定）----
